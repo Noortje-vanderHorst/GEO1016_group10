@@ -1,3 +1,4 @@
+### C++
 # Prerequisites
 *.d
 
@@ -30,3 +31,35 @@
 *.exe
 *.out
 *.app
+
+### LaTeX
+# LaTeX temporary files
+*.aux
+*.log
+*.toc
+
+# PDF output
+*.pdf
+
+# Latexmk
+*.fdb_latexmk
+
+# SyncTeX
+*.synctex.gz
+
+# LaTeX Beamer
+*.snm
+*.vrb
+*.nav
+*.out
+
+# BibTeX
+*.bbl
+*.blg
+
+# Log created by Adobe Reader
+C:\\nppdf32Log\\debuglog.txt
+
+# Sublime Text Project Files (usually contain absolute paths)
+*.sublime-project
+*.sublime-workspace
