@@ -6,7 +6,7 @@
 *.slo
 *.lo
 *.o
-*.obj
+# *.obj
 
 # Precompiled Headers
 *.gch
@@ -63,3 +63,5 @@ C:\\nppdf32Log\\debuglog.txt
 # Sublime Text Project Files (usually contain absolute paths)
 *.sublime-project
 *.sublime-workspace
+
+
