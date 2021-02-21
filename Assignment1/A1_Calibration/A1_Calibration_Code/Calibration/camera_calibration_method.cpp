@@ -52,31 +52,128 @@ bool CameraCalibration::calibration(
         mat3& R,
         vec3& t)
 {
+    // todo: remove this in final version
     std::cout << std::endl;
     std::cout << "TODO: I am going to implement the calibration() function in the following file:" << std::endl
               << "\t" << __FILE__ << std::endl;
     std::cout << "TODO: After implementing the calibration() function, I will disable all unrelated output ...\n\n";
 
-    // TODO: check if input is valid (e.g., number of correspondences >= 6, sizes of 2D/3D points must match)
+    /// TO DO: check if input is valid (e.g., number of correspondences >= 6, sizes of 2D/3D points must match)
+    // Already partially implemented:
+    //      - in open() method: when reading the file, if a line does not contain exactly 5 values,
+    //        none of the coordinates are added to points_2d and points_3d.
+    //      - in key_press_event() method: throws error if the size of points_2d or points_3d < 6.
 
-    // TODO: construct the P matrix (so P * m = 0).
+    // check: 2d points all have positive coordinates
+    for (auto pt_2d : points_2d_) {
+        if (pt_2d[0] < 0 || pt_2d[1] < 0) {
+            std::cerr << "invalid 2d point with negative coordinates: (" << pt_2d[0] << " "
+                      << pt_2d[1] << ")" << std::endl;
+            return false;
+        }
+    }
+    // check: 3d points all have positive coordinates
+    for (auto pt_3d : points_3d_){
+        if (pt_3d[0] < 0 || pt_3d[1] < 0 || pt_3d[2] < 0) {
+            std::cerr << "invalid 3d point with negative coordinates: (" << pt_3d[0] << " "
+                                                                         << pt_3d[1] << " "
+                                                                         << pt_3d[2] << ")" << std::endl;
+            return false;
+        }
+    }
+    // todo: do all 2d and 3d points have to be different points?
 
-    // TODO: solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
-    //   Optional: you can check if your M is correct by applying M on the 3D points. If correct, the projected point
-    //             should be very close to your input images points.
+    /// TASK: construct the P matrix (so P * m = 0).
 
-    // TODO: extract intrinsic parameters from M.
+    // P initialized with 0s, size (2*[number of point pairs], 3)
+    int height = points_2d.size() * 2;  // 2n
+    Matrix<double> P(height, 12,  0.0);
+    std::cout << "P: \n" << P << std::endl;
 
-    // TODO: extract extrinsic parameters from M.
+    // x_coor_pi * (m3 * Pi) - m1 * Pi = 0
+    // y_coor_pi * (m3 * Pi) - m2 * Pi = 0
 
-    // TODO: uncomment the line below to return true when testing your algorithm and in you final submission.
-    //return false;
+    // P matrix is entire system of equations (see above)
+    // m = M as a vector of size (1, 12)
+    // P size = (2n, (4 * 3))
+    // P * m = 0
+
+    // filling P: for each point pair
+    for (int i = 0; i < points_2d_.size(); ++i) {
+        // P_i = real world coordinate
+        double Px = points_3d_[i][0];
+        double Py = points_3d_[i][1];
+        double Pz = points_3d_[i][2];
+        double Pw = 1.0;    // homogenous coordinates
+
+        // filling the rows of P: twice, for x and y of the 2d point (u & v)
+        for (int j = 0; j < 2; ++j) {
+            // Pi^T
+            P(i*2 + j, 0) = Px;
+            P(i*2 + j, 1) = Py;
+            P(i*2 + j, 2) = Pz;
+            P(i*2 + j, 3) = Pw;
+            // 0^T
+            P(i*2 + j, 4) = 0.0;
+            P(i*2 + j, 5) = 0.0;
+            P(i*2 + j, 6) = 0.0;
+            P(i*2 + j, 7) = 0.0;
+            // -[u or v] * Pi^T
+            P(i*2 + j, 8) = -points_2d_[i][j] * Px;
+            P(i*2 + j, 9) = -points_2d_[i][j] * Py;
+            P(i*2 + j, 10) = -points_2d_[i][j] * Pz;
+            P(i*2 + j, 11) = -points_2d_[i][j] * Pw;
+        }
+    }
+
+    std::cout << "P: \n" << P << std::endl;
+    // todo: does the SVD work with size (2n, 12) or will it need (2n, 4)?
+
+    /// TASK: solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
+    ///   Optional: you can check if your M is correct by applying M on the 3D points. If correct, the projected point
+    ///             should be very close to your input images points.
+
+    Matrix<double> U(height, height, 0.0);   // initialized with 0s
+    Matrix<double> S(height, 12, 0.0);   // initialized with 0s
+    Matrix<double> V(12, 12, 0.0);   // initialized with 0s
+
+    // Compute the SVD decomposition of P
+    svd_decompose(P, U, S, V);
+
+    // M from m (m = last column of V)
+    Matrix<double> M(3, 4, 0.0);    // initialized with 0s
+
+    for (int col = 0; col < 4; ++col) {
+        for (int row = 0; row < 3; ++row) {
+            M(row, col) = V(11, row + 1 * col + 1);
+        }
+    }
+
+    std::cout << "M: \n" << M << std::endl;
+
+    // check if M is correct by applying it to the 3D points
+    for (int i=0; i<points_2d_.size(); ++i) {
+        std::vector<double> pts_3d = {points_3d_[i][0], points_3d_[i][1], points_3d_[i][2], 1.0};   // homogenous
+        auto test_pts = M * pts_3d;
+        std::cout << "\t real points: " << i << ": (" << points_3d_[i] << ") <-> (" << points_2d_[i] << ")" << std::endl;
+        std::cout << "\t own points:  " << i << ": (" << round(test_pts[2]) << " "
+                                                      << round(test_pts[1]) << " "
+                                                      << round(test_pts[0]) << ")" << std::endl;
+    }
+
+    /// TASK: extract intrinsic parameters from M.
+
+    /// TASK: extract extrinsic parameters from M.
+
+    /// TASK: uncomment the line below to return true when testing your algorithm and in you final submission.
+    // this draws a camera with the calculated M parameters
+    return false;
 
 
 
-    // TODO: The following code is just an example showing you SVD decomposition, matrix inversion, and some related.
-    // TODO: Delete the code below (or change "#if 1" in the first line to "#if 0") in you final submission.
-#if 1
+    /// TASK: The following code is just an example showing you SVD decomposition, matrix inversion, and some related.
+    /// TASK: Delete the code below (or change "#if 1" in the first line to "#if 0") in you final submission.
+#if 0
     std::cout << "[Liangliang:] Camera calibration requires computing the SVD and inverse of matrices.\n"
                  "\tIn this assignment, I provide you with a Matrix data structure for storing matrices of arbitrary\n"
                  "\tsizes (see matrix.h). I also wrote the example code to show you how to:\n"
