@@ -109,15 +109,15 @@ bool CameraCalibration::calibration(
         // filling the rows of P: twice, for x and y of the 2d point (u & v)
         for (int j = 0; j < 2; ++j) {
             // Pi^T
-            P(i*2 + j, 0) = Px;
-            P(i*2 + j, 1) = Py;
-            P(i*2 + j, 2) = Pz;
-            P(i*2 + j, 3) = Pw;
+            P(i*2 + j, 0 + j*4) = Px;
+            P(i*2 + j, 1 + j*4) = Py;
+            P(i*2 + j, 2 + j*4) = Pz;
+            P(i*2 + j, 3 + j*4) = Pw;
             // 0^T
-            P(i*2 + j, 4) = 0.0;
-            P(i*2 + j, 5) = 0.0;
-            P(i*2 + j, 6) = 0.0;
-            P(i*2 + j, 7) = 0.0;
+            P(i*2 + j, 4 - j*4) = 0.0;
+            P(i*2 + j, 5 - j*4) = 0.0;
+            P(i*2 + j, 6 - j*4) = 0.0;
+            P(i*2 + j, 7 - j*4) = 0.0;
             // -[u or v] * Pi^T
             P(i*2 + j, 8) = -points_2d_[i][j] * Px;
             P(i*2 + j, 9) = -points_2d_[i][j] * Py;
@@ -145,7 +145,7 @@ bool CameraCalibration::calibration(
 
     for (int col = 0; col < 4; ++col) {
         for (int row = 0; row < 3; ++row) {
-            M(row, col) = V(11, row + 1 * col + 1);
+            M(row, col) = V(row + row*3 + col, 11);
         }
     }
 
