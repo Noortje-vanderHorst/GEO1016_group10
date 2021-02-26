@@ -64,24 +64,52 @@ bool CameraCalibration::calibration(
     //        none of the coordinates are added to points_2d and points_3d.
     //      - in key_press_event() method: throws error if the size of points_2d or points_3d < 6.
 
-    // check: 2d points all have positive coordinates
-    for (auto pt_2d : points_2d_) {
-        if (pt_2d[0] < 0 || pt_2d[1] < 0) {
-            std::cerr << "invalid 2d point with negative coordinates: (" << pt_2d[0] << " "
-                      << pt_2d[1] << ")" << std::endl;
-            return false;
+    //check for duplicate and negative points in input:
+    std::vector<int> duplicateLocations;
+
+    for (int i = 0; i < points_3d.size(); i ++ ){
+        if (points_3d[i][0] < 0 || points_3d[i][1] < 0 || points_3d[i][2] < 0){
+            std::cout << "Invalid 3d point with negative coordinates: ("
+                      << points_3d[i][0] << " "
+                      << points_3d[i][1] << " "
+                      << points_3d[i][2] << ")" << std::endl;
+            std::cout << "Point is ignored" << std::endl;
+
+            duplicateLocations.emplace_back(i);
+            continue;
+        }
+
+        for (int j = 0; j < points_3d.size(); j ++) {
+            if ( i >= j) {
+                continue;
+            }
+            if (points_3d[i].x == points_3d[j].x
+                && points_3d[i].y == points_3d[j].y
+                && points_3d[i].z == points_3d[j].z) {
+
+                std::cout << "Duplicate 3d point with coordinates: ("
+                          << points_3d[i][0] << " "
+                          << points_3d[i][1] << " "
+                          << points_3d[i][2] << ")" << std::endl;
+                std::cout << "Point is ignored" << std::endl;
+
+                duplicateLocations.emplace_back(i);
+                break;
+            }
         }
     }
-    // check: 3d points all have positive coordinates
-    for (auto pt_3d : points_3d_){
-        if (pt_3d[0] < 0 || pt_3d[1] < 0 || pt_3d[2] < 0) {
-            std::cerr << "invalid 3d point with negative coordinates: (" << pt_3d[0] << " "
-                                                                         << pt_3d[1] << " "
-                                                                         << pt_3d[2] << ")" << std::endl;
-            return false;
-        }
+
+    // check if the size after removal is big enough
+    if (points_3d.size() - duplicateLocations.size() < 6){
+        std::cerr << "expecting at least 6 unique pairs of 3D/2D corresponding points" << std::endl;
+        return false;
     }
-    // todo: do all 2d and 3d points have to be different points?
+
+    // remove duplicate points from data:
+    for(int i = duplicateLocations.size(); i--;){
+        points_3d_.erase(points_3d.begin() + i);
+        points_2d_.erase(points_2d.begin() + i);
+    }
 
     /// TASK: construct the P matrix (so P * m = 0).
 
