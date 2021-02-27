@@ -68,17 +68,30 @@ bool CameraCalibration::calibration(
     std::vector<int> duplicateLocations;
 
     for (int i = 0; i < points_3d.size(); i ++ ){
-        if (points_3d[i][0] < 0 || points_3d[i][1] < 0 || points_3d[i][2] < 0){
+        // check for negative 3D points
+        if (points_3d[i].x < 0 || points_3d[i].y < 0 || points_3d[i].x < 0){
             std::cout << "Invalid 3d point with negative coordinates: ("
-                      << points_3d[i][0] << " "
-                      << points_3d[i][1] << " "
-                      << points_3d[i][2] << ")" << std::endl;
+                      << points_3d[i].x << " "
+                      << points_3d[i].y << " "
+                      << points_3d[i].z<< ")" << std::endl;
             std::cout << "Point is ignored" << std::endl;
 
             duplicateLocations.emplace_back(i);
             continue;
         }
 
+        // check for negative 2D points
+        if (points_2d[i].x < 0 || points_2d[i].y < 0){
+            std::cout << "Invalid 2d point with negative coordinates: ("
+                      << points_2d[i].x << " "
+                      << points_2d[i].y << ")" << std::endl;
+            std::cout << "Point is ignored" << std::endl;
+
+            duplicateLocations.emplace_back(i);
+            continue;
+        }
+
+        // check for duplicates
         for (int j = 0; j < points_3d.size(); j ++) {
             if ( i >= j) {
                 continue;
@@ -105,7 +118,7 @@ bool CameraCalibration::calibration(
         return false;
     }
 
-    // remove duplicate points from data:
+    // remove invalid points from data:
     for(int i = duplicateLocations.size(); i--;){
         points_3d_.erase(points_3d.begin() + i);
         points_2d_.erase(points_2d.begin() + i);
