@@ -168,7 +168,6 @@ bool CameraCalibration::calibration(
     }
 
     std::cout << "P: \n" << P << std::endl;
-    // todo: does the SVD work with size (2n, 12) or will it need (2n, 4)?
 
     /// TASK: solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
     ///   Optional: you can check if your M is correct by applying M on the 3D points. If correct, the projected point
@@ -203,6 +202,74 @@ bool CameraCalibration::calibration(
     }
 
     /// TASK: extract intrinsic parameters from M.
+
+    // todo: remove all the print statements in the end
+
+    // M = A b
+
+    // A = the three leftmost columns of M
+    auto a1 = M.get_column(0);
+    auto a2 = M.get_column(1);
+    auto a3 = M.get_column(2);
+
+    std::cout << "A_1: " << a1 << std::endl;
+    std::cout << "A_2: " << a2 << std::endl;
+    std::cout << "A_3: " << a3 << std::endl;
+
+    /// scaling factor rho
+    // todo: norm() in matrix.h already makes sure the length is positive,
+    //  so sign determination in rho formula seems unnecessary?
+
+    // rho = +-1 / A3
+    float rho = 1 / norm(a3);
+
+    std::cout << "rho: " << rho << std::endl;
+    std::cout << "M: " << M << std::endl;
+
+    /// principal point (cx, cy)
+
+    // cx = rho^2 * A1 * A3
+    // cy = rho^2 * A2 * A3
+
+    auto u0 = pow(rho, 2) * a1 * a3;
+    auto v0 = pow(rho, 2) * a2 * a3;
+
+    std::cout << "cx: " << u0 << std::endl;
+    std::cout << "cy: " << v0 << std::endl;
+    cx = u0;
+    cy = v0;
+
+    /// skew angle theta
+
+    // theta = cos^-1 (-    (a1 x a3) dot (a2 x a3)
+    //                  -------------------------------------
+    //                  length(a1 x a3) dot length(a2 x a3) )
+
+    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ) );
+
+    std::cout << "theta: " << theta << std::endl;
+
+    /// focal length fx & fy
+
+    // alpha = rho^2 * length(a1 x a3) * sin(theta)
+    // beta = rho^2 * length(a2 x a3) * sin(theta)
+
+    float alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
+    float beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
+    std::cout << "alpha (fx): " << alpha << std::endl;
+    std::cout << "beta (fy): " << beta << std::endl;
+
+    fx = alpha;
+    fy = beta;
+
+
+    /// skew factor
+
+    // skew factor = -alpha * cot(theta)
+
+    skew = -fx * (cos(theta) / sin(theta));
+    std::cout << "skew factor: " << skew << std::endl;
+
 
     /// TASK: extract extrinsic parameters from M.
 

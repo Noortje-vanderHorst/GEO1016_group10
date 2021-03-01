@@ -328,6 +328,9 @@ namespace easy3d {
     FT operator*(const std::vector<FT> &, const std::vector<FT> &);    // Inner product for vectors.
     template<typename FT>
     FT dot(const std::vector<FT> &, const std::vector<FT> &);            // Inner product for vectors.
+    /// custom
+    template<typename FT>
+    std::vector<FT> cross(const std::vector<FT> &, const std::vector<FT> &);       // Outer product (cross) for vectors.
 
 // utilities
     template<typename FT>
@@ -1771,6 +1774,23 @@ namespace easy3d {
             sum += (*itr1++) * (*itr2++);
 
         return sum;
+    }
+
+/// custom
+// Outer product for vectors.
+// only works for vectors of length 3
+    template<typename FT>
+    std::vector<FT> cross(const std::vector<FT> &v1, const std::vector<FT> &v2) {
+        assert(v1.size() == v2.size());
+        assert(v1.size() == 3);
+
+        std::vector<FT> res(v1.size());
+
+        res[0] = (v1[1] * v2[2]) - (v1[2] * v2[1]);
+        res[1] = (v1[2] * v2[0]) - (v1[0] * v2[2]);
+        res[2] = (v1[0] * v2[1]) - (v1[1] * v2[0]);
+
+        return res;
     }
 
 
