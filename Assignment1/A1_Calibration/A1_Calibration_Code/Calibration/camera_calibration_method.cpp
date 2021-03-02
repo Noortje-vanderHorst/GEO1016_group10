@@ -43,6 +43,7 @@ using namespace easy3d;
  *           - R:         the 3x3 rotation matrix encoding camera orientation.
  *           - t:         a 3D vector encoding camera location.
  */
+
 bool CameraCalibration::calibration(
         const std::vector<vec3>& points_3d,
         const std::vector<vec2>& points_2d,
@@ -67,7 +68,7 @@ bool CameraCalibration::calibration(
     //check for duplicate and negative points in input:
     std::vector<int> duplicateLocations;
 
-    for (int i = 0; i < points_3d.size(); i ++ ){
+    for (unsigned int i = 0; i < points_3d.size(); i ++ ){
         // check for negative 3D points
         if (points_3d[i].x < 0 || points_3d[i].y < 0 || points_3d[i].x < 0){
             std::cout << "Invalid 3d point with negative coordinates: ("
@@ -92,7 +93,7 @@ bool CameraCalibration::calibration(
         }
 
         // check for duplicates
-        for (int j = 0; j < points_3d.size(); j ++) {
+        for (unsigned int j = 0; j < points_3d.size(); j ++) {
             if ( i >= j) {
                 continue;
             }
@@ -129,7 +130,6 @@ bool CameraCalibration::calibration(
     // P initialized with 0s, size (2*[number of point pairs], 3)
     int height = (int) points_2d.size() * 2;  // 2n
     Matrix<double> P(height, 12,  0.0);
-    std::cout << "P: \n" << P << std::endl;
 
     // x_coor_pi * (m3 * Pi) - m1 * Pi = 0
     // y_coor_pi * (m3 * Pi) - m2 * Pi = 0
@@ -140,7 +140,7 @@ bool CameraCalibration::calibration(
     // P * m = 0
 
     // filling P: for each point pair
-    for (int i = 0; i < points_2d_.size(); ++i) {
+    for (int i = 0; i < (int) points_2d_.size(); ++i) {
         // P_i = real world coordinate
         double Px = points_3d_[i][0];
         double Py = points_3d_[i][1];
@@ -177,9 +177,10 @@ bool CameraCalibration::calibration(
     // M from m (m = last column of V)
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 3; ++row) {
-            M(row, col) = V(row + row*3 + col, 11);
+    // populate M
+    for (int i = 0; i < 3; i ++){
+        for (int j = 0; j < 4; j++){
+            M(i,j) = V(i * 4 + j, 11);
         }
     }
 
