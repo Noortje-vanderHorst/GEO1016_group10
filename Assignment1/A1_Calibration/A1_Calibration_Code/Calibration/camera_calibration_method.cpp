@@ -30,9 +30,6 @@ using namespace easy3d;
 
 
 /**
- * TODO: Finish this function for calibrating a camera from the corresponding 3D-2D point pairs.
- *       You may define a few functions for some sub-tasks.
- *
  * @param points_3d   An array of 3D points.
  * @param points_2d   An array of 2D points.
  * @return True on success, otherwise false. On success, the camera parameters are returned by
@@ -52,18 +49,6 @@ bool CameraCalibration::calibration(
         mat3& R,
         vec3& t)
 {
-    // todo: remove this in final version
-    std::cout << std::endl;
-    std::cout << "TODO: I am going to implement the calibration() function in the following file:" << std::endl
-              << "\t" << __FILE__ << std::endl;
-    std::cout << "TODO: After implementing the calibration() function, I will disable all unrelated output ...\n\n";
-
-    /// TO DO: check if input is valid (e.g., number of correspondences >= 6, sizes of 2D/3D points must match)
-    // Already partially implemented:
-    //      - in open() method: when reading the file, if a line does not contain exactly 5 values,
-    //        none of the coordinates are added to points_2d and points_3d.
-    //      - in key_press_event() method: throws error if the size of points_2d or points_3d < 6.
-
     //check for duplicate and negative points in input:
     std::vector<int> duplicateLocations;
 
@@ -130,14 +115,6 @@ bool CameraCalibration::calibration(
     int height = (int) points_2d.size() * 2;  // 2n
     Matrix<double> P(height, 12,  0.0);
 
-    // x_coor_pi * (m3 * Pi) - m1 * Pi = 0
-    // y_coor_pi * (m3 * Pi) - m2 * Pi = 0
-
-    // P matrix is entire system of equations (see above)
-    // m = M as a vector of size (1, 12)
-    // P size = (2n, (4 * 3))
-    // P * m = 0
-
     // filling P: for each point pair
     for (int i = 0; i < (int) points_2d_.size(); ++i) {
         // P_i = real world coordinate
@@ -162,9 +139,7 @@ bool CameraCalibration::calibration(
 
     std::cout << "P: \n" << P << std::endl;
 
-    /// TASK: solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
-    ///   Optional: you can check if your M is correct by applying M on the 3D points. If correct, the projected point
-    ///             should be very close to your input images points.
+    //solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
 
     Matrix<double> U(height, height, 0.0);   // initialized with 0s
     Matrix<double> S(height, 12, 0.0);   // initialized with 0s
@@ -177,7 +152,6 @@ bool CameraCalibration::calibration(
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
     // populate M
-
     for (int i = 0; i < 3; i ++){
         for (int j = 0; j < 4; j++){
             M(i,j) = V(i * 4 + j, 11);
@@ -187,7 +161,6 @@ bool CameraCalibration::calibration(
 
     // check if M is correct by applying it to the 3D points
     for (int i=0; i<points_2d_.size(); ++i) {
-//        std::vector<double> pts_3d = {points_3d_[i][0], points_3d_[i][1], points_3d_[i][2], 1.0};   // homogenous
         Matrix<double> pts_3d(4, 1, 0.0);
         pts_3d[0][0] = points_3d_[i][0];
         pts_3d[1][0] = points_3d_[i][1];
@@ -200,18 +173,13 @@ bool CameraCalibration::calibration(
 
     }
 
-    /// TASK: extract intrinsic parameters from M.
-
-    // todo: remove all the print statements in the end
-
-    // M = A b
-
+    // extract intrinsic parameters from M.
     // A = the three leftmost columns of M, b = column 4
     auto a1 = M.get_row(0);
     a1 = {a1[0], a1[1], a1[2]};
-    auto a2 = M.get_column(1);
+    auto a2 = M.get_row(1);
     a2 = {a2[0], a2[1], a2[2]};
-    auto a3 = M.get_column(2);
+    auto a3 = M.get_row(2);
     a3 = {a3[0], a3[1], a3[2]};
 
     std::cout << "A_1: " << a1 << std::endl;
@@ -219,21 +187,13 @@ bool CameraCalibration::calibration(
     std::cout << "A_3: " << a3 << std::endl;
 
     /// scaling factor rho
-    // todo: norm() in matrix.h already makes sure the length is positive,
-    //  so sign determination in rho formula seems unnecessary?
-
-    // rho = +-1 / A3
-    float rho =  1 / norm(a3);
+    double rho =  1 / norm(a3);
 
     std::cout << "rho: " << rho << std::endl;
     std::cout << "norm(a3): " << norm(a3) << std::endl;
     std::cout << "M: " << M << std::endl;
 
     /// principal point (cx, cy)
-
-    // cx = rho^2 * A1 * A3
-    // cy = rho^2 * A2 * A3
-
     auto u0 = pow(rho, 2) * a1 * a3;
     auto v0 = pow(rho, 2) * a2 * a3;
 
@@ -243,12 +203,7 @@ bool CameraCalibration::calibration(
     cy = v0;
 
     /// skew angle theta
-
-    // theta = cos^-1 (-    (a1 x a3) dot (a2 x a3)
-    //                  -------------------------------------
-    //                  length(a1 x a3) dot length(a2 x a3) )
-
-    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
+    double theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
 
     std::cout << "theta: " << theta << std::endl;
     std::cout << "theta (deg): " << rad2deg(theta) << std::endl;
@@ -258,33 +213,22 @@ bool CameraCalibration::calibration(
     // alpha = rho^2 * length(a1 x a3) * sin(theta)
     // beta = rho^2 * length(a2 x a3) * sin(theta)
 
-    float alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
-    float beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
+    double alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
+    double beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
     std::cout << "alpha (fx): " << alpha << std::endl;
     std::cout << "beta: " << beta << std::endl;
     std::cout << "fy: " << beta / sin(theta) << std::endl;
 
-    fx = alpha;
-    fy = beta / sin(theta);
+    fx = (float) alpha;
+    fy = (float) (beta / sin(theta));
 
 
     /// skew factor
-
-    // skew factor = -alpha * cot(theta)
-
-    skew = -fx * cos(theta);
+    skew = (float) (- fx * cos(theta));
     std::cout << "skew factor: " << skew << std::endl;
 
 
-    /// TASK: extract extrinsic parameters from M.
-
     /// rotation matrix R
-
-    // r1 = row 1 of R, etc.
-
-    // r1 = (a2 x a3) / length(a2 x a3)
-    // r2 = r3 x r1
-    // r3 = rho * a3
 
     auto r1 = cross(a2, a3) / norm(cross(a2, a3));
     auto r3 = rho * a3;
