@@ -177,9 +177,9 @@ bool CameraCalibration::calibration(
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
     // populate M
-    for (int i = 0; i < 3; i ++){
-        for (int j = 0; j < 4; j++){
-            M(i,j) = V(i * 4 + j, 11);
+    for (int col = 0; col < 4; ++col) {
+        for (int row = 0; row < 3; ++row) {
+            M(row, col) = V(11, row + 1 * col + 1);
         }
     }
 
