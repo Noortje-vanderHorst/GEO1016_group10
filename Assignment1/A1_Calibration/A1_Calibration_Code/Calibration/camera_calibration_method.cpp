@@ -282,26 +282,25 @@ bool CameraCalibration::calibration(
     // r3 = rho * a3
 
     auto r1 = cross(a2, a3) / norm(cross(a2, a3));
-    std::cout << "r1: " << r1 << std::endl;
-
     auto r3 = rho * a3;
-    std::cout << "r3: " << r3 << std::endl;
-
     auto r2 = cross(r3, r1);
+
+    std::cout << "r1: " << r1 << std::endl;
     std::cout << "r2: " << r2 << std::endl;
+    std::cout << "r3: " << r3 << std::endl;
 
 //    std::cout << "R: " << R << std::endl;
 
-    R(0, 0) = r1[0];
-    R(1, 0) = r1[1];
-    R(2, 0) = r1[2];
+    R(0, 0) = r1[1];
+    R(0, 1) = r1[1];
+    R(0, 2) = r1[2];
 
-    R(0, 1) = r2[0];
+    R(1, 0) = r2[0];
     R(1, 1) = r2[1];
-    R(2, 1) = r2[2];
+    R(1, 2) = r2[2];
 
-    R(0, 2) = r3[0];
-    R(1, 2) = r3[1];
+    R(2, 0) = r3[0];
+    R(2, 1) = r3[1];
     R(2, 2) = r3[2];
 
     std::cout << "R: " << R << std::endl;
