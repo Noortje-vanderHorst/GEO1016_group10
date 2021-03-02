@@ -206,6 +206,17 @@ bool CameraCalibration::calibration(
 
     /// TASK: extract extrinsic parameters from M.
 
+    /// rotation matrix R
+
+    // r1 = row 1 of R, etc.
+
+    // r1 = (a2 x a3) / length(a2 x a3)
+
+
+
+    /// translation 3D vector t (camera location)
+
+
     /// TASK: uncomment the line below to return true when testing your algorithm and in you final submission.
     // this draws a camera with the calculated M parameters
     return false;
