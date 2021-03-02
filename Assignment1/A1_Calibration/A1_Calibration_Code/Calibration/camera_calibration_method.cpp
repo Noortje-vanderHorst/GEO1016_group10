@@ -177,9 +177,9 @@ bool CameraCalibration::calibration(
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
     // populate M
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 3; ++row) {
-            M(row, col) = V(11, row + 1 * col + 1);
+    for (int i = 0; i < 3; i ++){
+        for (int j = 0; j < 4; j++){
+            M(i,j) = V(i * 4 + j, 11);
         }
     }
 
@@ -190,9 +190,10 @@ bool CameraCalibration::calibration(
         std::vector<double> pts_3d = {points_3d_[i][0], points_3d_[i][1], points_3d_[i][2], 1.0};   // homogenous
         auto test_pts = M * pts_3d;
         std::cout << "\t real points: " << i << ": (" << points_3d_[i] << ") <-> (" << points_2d_[i] << ")" << std::endl;
-        std::cout << "\t own points:  " << i << ": (" << round(test_pts[2]) << " "
-                                                      << round(test_pts[1]) << " "
-                                                      << round(test_pts[0]) << ")" << std::endl;
+        std::cout << "\t own points:  " << i << ": (" << round(test_pts[0]/test_pts[2]) << " "
+                                                      << round(test_pts[1]/test_pts[2]) << ")" << std::endl;
+
+        //std::cout << "test points: " << test_pts << std::endl;
     }
 
     /// TASK: extract intrinsic parameters from M.
