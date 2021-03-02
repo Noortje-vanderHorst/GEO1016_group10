@@ -202,9 +202,12 @@ bool CameraCalibration::calibration(
     // M = A b
 
     // A = the three leftmost columns of M, b = column 4
-    auto a1 = M.get_column(0);
+    auto a1 = M.get_row(0);
+    a1 = {a1[0], a1[1], a1[2]};
     auto a2 = M.get_column(1);
+    a2 = {a2[0], a2[1], a2[2]};
     auto a3 = M.get_column(2);
+    a3 = {a3[0], a3[1], a3[2]};
 
     std::cout << "A_1: " << a1 << std::endl;
     std::cout << "A_2: " << a2 << std::endl;
@@ -240,10 +243,7 @@ bool CameraCalibration::calibration(
     //                  -------------------------------------
     //                  length(a1 x a3) dot length(a2 x a3) )
 
-//    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
-
-    // theta cheese
-    float theta = deg2rad(88);
+    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
 
     std::cout << "theta: " << theta << std::endl;
     std::cout << "theta (deg): " << rad2deg(theta) << std::endl;
@@ -349,7 +349,7 @@ bool CameraCalibration::calibration(
 //    cy = 1;
 //    skew = 0.2;
 
-    t = {8, 8, 8};
+//    t = {8, 8, 8};
 
 
 
