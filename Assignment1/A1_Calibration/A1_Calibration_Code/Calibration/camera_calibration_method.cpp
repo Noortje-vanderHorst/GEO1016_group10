@@ -127,7 +127,7 @@ bool CameraCalibration::calibration(
     /// TASK: construct the P matrix (so P * m = 0).
 
     // P initialized with 0s, size (2*[number of point pairs], 3)
-    int height = points_2d.size() * 2;  // 2n
+    int height = (int) points_2d.size() * 2;  // 2n
     Matrix<double> P(height, 12,  0.0);
     std::cout << "P: \n" << P << std::endl;
 
@@ -145,7 +145,6 @@ bool CameraCalibration::calibration(
         double Px = points_3d_[i][0];
         double Py = points_3d_[i][1];
         double Pz = points_3d_[i][2];
-        double Pw = 1.0;    // homogenous coordinates
 
         // filling the rows of P: twice, for x and y of the 2d point (u & v)
         for (int j = 0; j < 2; ++j) {
@@ -153,17 +152,12 @@ bool CameraCalibration::calibration(
             P(i*2 + j, 0 + j*4) = Px;
             P(i*2 + j, 1 + j*4) = Py;
             P(i*2 + j, 2 + j*4) = Pz;
-            P(i*2 + j, 3 + j*4) = Pw;
-            // 0^T
-            P(i*2 + j, 4 - j*4) = 0.0;
-            P(i*2 + j, 5 - j*4) = 0.0;
-            P(i*2 + j, 6 - j*4) = 0.0;
-            P(i*2 + j, 7 - j*4) = 0.0;
+            P(i*2 + j, 3 + j*4) = 1.0;
             // -[u or v] * Pi^T
             P(i*2 + j, 8) = -points_2d_[i][j] * Px;
             P(i*2 + j, 9) = -points_2d_[i][j] * Py;
             P(i*2 + j, 10) = -points_2d_[i][j] * Pz;
-            P(i*2 + j, 11) = -points_2d_[i][j] * Pw;
+            P(i*2 + j, 11) = -points_2d_[i][j] * 1.0;
         }
     }
 
