@@ -240,9 +240,13 @@ bool CameraCalibration::calibration(
     //                  -------------------------------------
     //                  length(a1 x a3) dot length(a2 x a3) )
 
-    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
+//    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
+
+    // theta cheese
+    float theta = deg2rad(88);
 
     std::cout << "theta: " << theta << std::endl;
+    std::cout << "theta (deg): " << rad2deg(theta) << std::endl;
 
     /// focal length fx & fy
 
@@ -252,10 +256,11 @@ bool CameraCalibration::calibration(
     float alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
     float beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
     std::cout << "alpha (fx): " << alpha << std::endl;
-    std::cout << "beta (fy): " << beta << std::endl;
+    std::cout << "beta: " << beta << std::endl;
+    std::cout << "fy: " << beta / sin(theta) << std::endl;
 
     fx = alpha;
-    fy = beta;
+    fy = beta / sin(theta);
 
 
     /// skew factor
@@ -338,8 +343,8 @@ bool CameraCalibration::calibration(
     std::cout << "t: " << t << std::endl;
 
     // testing
-    fx = 1;
-    fy = 1;
+//    fx = 1;
+//    fy = 1;
 //    cx = 1;
 //    cy = 1;
 //    skew = 0.2;
