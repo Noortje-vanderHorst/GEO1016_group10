@@ -29,11 +29,7 @@
 using namespace easy3d;
 
 
-
 /**
- * TODO: Finish this function for calibrating a camera from the corresponding 3D-2D point pairs.
- *       You may define a few functions for some sub-tasks.
- *
  * @param points_3d   An array of 3D points.
  * @param points_2d   An array of 2D points.
  * @return True on success, otherwise false. On success, the camera parameters are returned by
@@ -43,6 +39,7 @@ using namespace easy3d;
  *           - R:         the 3x3 rotation matrix encoding camera orientation.
  *           - t:         a 3D vector encoding camera location.
  */
+
 bool CameraCalibration::calibration(
         const std::vector<vec3>& points_3d,
         const std::vector<vec2>& points_2d,
@@ -52,22 +49,10 @@ bool CameraCalibration::calibration(
         mat3& R,
         vec3& t)
 {
-    // todo: remove this in final version
-    std::cout << std::endl;
-    std::cout << "TODO: I am going to implement the calibration() function in the following file:" << std::endl
-              << "\t" << __FILE__ << std::endl;
-    std::cout << "TODO: After implementing the calibration() function, I will disable all unrelated output ...\n\n";
-
-    /// TO DO: check if input is valid (e.g., number of correspondences >= 6, sizes of 2D/3D points must match)
-    // Already partially implemented:
-    //      - in open() method: when reading the file, if a line does not contain exactly 5 values,
-    //        none of the coordinates are added to points_2d and points_3d.
-    //      - in key_press_event() method: throws error if the size of points_2d or points_3d < 6.
-
     //check for duplicate and negative points in input:
     std::vector<int> duplicateLocations;
 
-    for (int i = 0; i < points_3d.size(); i ++ ){
+    for (unsigned int i = 0; i < points_3d.size(); i ++ ){
         // check for negative 3D points
         if (points_3d[i].x < 0 || points_3d[i].y < 0 || points_3d[i].x < 0){
             std::cout << "Invalid 3d point with negative coordinates: ("
@@ -92,7 +77,7 @@ bool CameraCalibration::calibration(
         }
 
         // check for duplicates
-        for (int j = 0; j < points_3d.size(); j ++) {
+        for (unsigned int j = 0; j < points_3d.size(); j ++) {
             if ( i >= j) {
                 continue;
             }
@@ -129,18 +114,9 @@ bool CameraCalibration::calibration(
     // P initialized with 0s, size (2*[number of point pairs], 3)
     int height = (int) points_2d.size() * 2;  // 2n
     Matrix<double> P(height, 12,  0.0);
-    std::cout << "P: \n" << P << std::endl;
-
-    // x_coor_pi * (m3 * Pi) - m1 * Pi = 0
-    // y_coor_pi * (m3 * Pi) - m2 * Pi = 0
-
-    // P matrix is entire system of equations (see above)
-    // m = M as a vector of size (1, 12)
-    // P size = (2n, (4 * 3))
-    // P * m = 0
 
     // filling P: for each point pair
-    for (int i = 0; i < points_2d_.size(); ++i) {
+    for (int i = 0; i < (int) points_2d_.size(); ++i) {
         // P_i = real world coordinate
         double Px = points_3d_[i][0];
         double Py = points_3d_[i][1];
@@ -163,9 +139,7 @@ bool CameraCalibration::calibration(
 
     std::cout << "P: \n" << P << std::endl;
 
-    /// TASK: solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
-    ///   Optional: you can check if your M is correct by applying M on the 3D points. If correct, the projected point
-    ///             should be very close to your input images points.
+    //solve for M (the whole projection matrix, i.e., M = K * [R, t]) using SVD decomposition.
 
     Matrix<double> U(height, height, 0.0);   // initialized with 0s
     Matrix<double> S(height, 12, 0.0);   // initialized with 0s
@@ -177,54 +151,49 @@ bool CameraCalibration::calibration(
     // M from m (m = last column of V)
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 3; ++row) {
-            M(row, col) = V(row + row*3 + col, 11);
+    // populate M
+    for (int i = 0; i < 3; i ++){
+        for (int j = 0; j < 4; j++){
+            M(i,j) = V(i * 4 + j, 11);
         }
     }
-
     std::cout << "M: \n" << M << std::endl;
 
     // check if M is correct by applying it to the 3D points
     for (int i=0; i<points_2d_.size(); ++i) {
-        std::vector<double> pts_3d = {points_3d_[i][0], points_3d_[i][1], points_3d_[i][2], 1.0};   // homogenous
+        Matrix<double> pts_3d(4, 1, 0.0);
+        pts_3d[0][0] = points_3d_[i][0];
+        pts_3d[1][0] = points_3d_[i][1];
+        pts_3d[2][0] = points_3d_[i][2];
+        pts_3d[3][0] = 1.0;
         auto test_pts = M * pts_3d;
         std::cout << "\t real points: " << i << ": (" << points_3d_[i] << ") <-> (" << points_2d_[i] << ")" << std::endl;
-        std::cout << "\t own points:  " << i << ": (" << round(test_pts[2]) << " "
-                                                      << round(test_pts[1]) << " "
-                                                      << round(test_pts[0]) << ")" << std::endl;
+        std::cout << "\t own points:  " << i << ": (" << test_pts[0][0] / test_pts[2][0] << " "
+                                                      << test_pts[0][1] / test_pts[2][0] << ")" << std::endl;
+
     }
 
-    /// TASK: extract intrinsic parameters from M.
-
-    // todo: remove all the print statements in the end
-
-    // M = A b
-
-    // A = the three leftmost columns of M
-    auto a1 = M.get_column(0);
-    auto a2 = M.get_column(1);
-    auto a3 = M.get_column(2);
+    // extract intrinsic parameters from M.
+    // A = the three leftmost columns of M, b = column 4
+    auto a1 = M.get_row(0);
+    a1 = {a1[0], a1[1], a1[2]};
+    auto a2 = M.get_row(1);
+    a2 = {a2[0], a2[1], a2[2]};
+    auto a3 = M.get_row(2);
+    a3 = {a3[0], a3[1], a3[2]};
 
     std::cout << "A_1: " << a1 << std::endl;
     std::cout << "A_2: " << a2 << std::endl;
     std::cout << "A_3: " << a3 << std::endl;
 
     /// scaling factor rho
-    // todo: norm() in matrix.h already makes sure the length is positive,
-    //  so sign determination in rho formula seems unnecessary?
-
-    // rho = +-1 / A3
-    float rho = 1 / norm(a3);
+    double rho =  1 / norm(a3);
 
     std::cout << "rho: " << rho << std::endl;
+    std::cout << "norm(a3): " << norm(a3) << std::endl;
     std::cout << "M: " << M << std::endl;
 
     /// principal point (cx, cy)
-
-    // cx = rho^2 * A1 * A3
-    // cy = rho^2 * A2 * A3
-
     auto u0 = pow(rho, 2) * a1 * a3;
     auto v0 = pow(rho, 2) * a2 * a3;
 
@@ -234,42 +203,103 @@ bool CameraCalibration::calibration(
     cy = v0;
 
     /// skew angle theta
-
-    // theta = cos^-1 (-    (a1 x a3) dot (a2 x a3)
-    //                  -------------------------------------
-    //                  length(a1 x a3) dot length(a2 x a3) )
-
-    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ) );
+    double theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
 
     std::cout << "theta: " << theta << std::endl;
+    std::cout << "theta (deg): " << rad2deg(theta) << std::endl;
 
     /// focal length fx & fy
 
     // alpha = rho^2 * length(a1 x a3) * sin(theta)
     // beta = rho^2 * length(a2 x a3) * sin(theta)
 
-    float alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
-    float beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
+    double alpha = pow(rho, 2) * norm(cross(a1, a3)) * sin(theta);
+    double beta = pow(rho, 2) * norm(cross(a2, a3)) * sin(theta);
     std::cout << "alpha (fx): " << alpha << std::endl;
-    std::cout << "beta (fy): " << beta << std::endl;
+    std::cout << "beta: " << beta << std::endl;
+    std::cout << "fy: " << beta / sin(theta) << std::endl;
 
-    fx = alpha;
-    fy = beta;
+    fx = (float) alpha;
+    fy = (float) (beta / sin(theta));
 
 
     /// skew factor
-
-    // skew factor = -alpha * cot(theta)
-
-    skew = -fx * (cos(theta) / sin(theta));
+    skew = (float) (- fx * cos(theta));
     std::cout << "skew factor: " << skew << std::endl;
 
 
-    /// TASK: extract extrinsic parameters from M.
+    /// rotation matrix R
+
+    auto r1 = cross(a2, a3) / norm(cross(a2, a3));
+    auto r3 = rho * a3;
+    auto r2 = cross(r3, r1);
+
+    std::cout << "r1: " << r1 << std::endl;
+    std::cout << "r2: " << r2 << std::endl;
+    std::cout << "r3: " << r3 << std::endl;
+
+//    std::cout << "R: " << R << std::endl;
+
+    R(0, 0) = r1[0];
+    R(0, 1) = r1[1];
+    R(0, 2) = r1[2];
+
+    R(1, 0) = r2[0];
+    R(1, 1) = r2[1];
+    R(1, 2) = r2[2];
+
+    R(2, 0) = r3[0];
+    R(2, 1) = r3[1];
+    R(2, 2) = r3[2];
+
+    std::cout << "R: " << R << std::endl;
+
+    /// translation 3D vector t (camera location)
+
+    // t = rho * K^-1 * b
+
+    // K =  | fx    s     cx  |
+    //      | 0     fy    cy  |
+    //      | 0     0     1   |
+
+    Matrix<double> K(3, 3, 0.0);   // initialized with 0s
+
+    K(0, 0) = fx;
+    K(0, 1) = skew;
+    K(0, 2) = cx;
+    K(1, 1) = fy;
+    K(1, 2) = cy;
+    K(2, 2) = 1.0;
+
+    std::cout << "K: " << K << std::endl;
+
+    Matrix<double> invK(3, 3);
+    inverse(K, invK);
+
+    // todo: is b then the last column of M?
+    auto b_T = M.get_column(3);
+    Matrix<double> b(3, 1, 0.0);
+    b[0][0] = b_T[0];
+    b[1][0] = b_T[1];
+    b[2][0] = b_T[2];
+
+
+    Matrix<double> t_T = rho * invK * b;
+
+    std::cout << "inv K: " << invK << std::endl;
+    std::cout << "K * inv K: " << K * invK << std::endl;
+    std::cout << "t_T: " << t_T << std::endl;
+
+    t[0] = t_T[0][0];
+    t[1] = t_T[1][0];
+    t[2] = t_T[2][0];
+
+    std::cout << "t: " << t << std::endl;
+
 
     /// TASK: uncomment the line below to return true when testing your algorithm and in you final submission.
     // this draws a camera with the calculated M parameters
-    return false;
+    return true;
 
 
 
