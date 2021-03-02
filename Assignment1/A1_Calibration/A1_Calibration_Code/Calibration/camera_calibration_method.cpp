@@ -29,7 +29,6 @@
 using namespace easy3d;
 
 
-
 /**
  * TODO: Finish this function for calibrating a camera from the corresponding 3D-2D point pairs.
  *       You may define a few functions for some sub-tasks.
@@ -216,7 +215,7 @@ bool CameraCalibration::calibration(
     //  so sign determination in rho formula seems unnecessary?
 
     // rho = +-1 / A3
-    float rho =  1 / sqrt(pow(a3[0], 2) + pow(a3[1], 2) + pow(a3[2], 2));
+    float rho =  1 / norm(a3);
 
     std::cout << "rho: " << rho << std::endl;
     std::cout << "norm(a3): " << norm(a3) << std::endl;
