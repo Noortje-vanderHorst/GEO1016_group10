@@ -177,11 +177,12 @@ bool CameraCalibration::calibration(
     Matrix<double> M(3, 4, 0.0);    // initialized with 0s
 
     // populate M
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            M(i, j) = V(j + i * 4, 11);
+    for (int i = 0; i < 3; i ++){
+        for (int j = 0; j < 4; j++){
+            M(i,j) = V(i * 4 + j, 11);
         }
     }
+
     std::cout << "M: \n" << M << std::endl;
 
     // check if M is correct by applying it to the 3D points
@@ -318,7 +319,7 @@ bool CameraCalibration::calibration(
 
     Matrix<double> K(3, 3, 0.0);   // initialized with 0s
 
-    K(0, 0) = fx;
+    K(0, 0) = abs(fx);
     K(0, 1) = skew;
     K(0, 2) = cx;
     K(1, 1) = fy;
@@ -331,24 +332,29 @@ bool CameraCalibration::calibration(
     inverse(K, invK);
 
     // todo: is b then the last column of M?
-    auto b_T = M.get_column(3);
-    Matrix<double> b(3, 1, 0.0);
-    b[0][0] = b_T[0];
-    b[1][0] = b_T[1];
-    b[2][0] = b_T[2];
-
-
-    Matrix<double> t_T = rho * invK * b;
+    auto b = M.get_column(3);
+    auto transpose = rho * invK * b;
 
     std::cout << "inv K: " << invK << std::endl;
     std::cout << "K * inv K: " << K * invK << std::endl;
-    std::cout << "t_T: " << t_T << std::endl;
+    std::cout << "transpose: " << transpose << std::endl;
 
-    t[0] = t_T[0][0];
-    t[1] = t_T[1][0];
-    t[2] = t_T[2][0];
+    t[0] = transpose[0];
+    t[1] = transpose[1];
+    t[2] = transpose[2];
 
     std::cout << "t: " << t << std::endl;
+
+    // testing
+//    fx = 1;
+//    fy = 1;
+//    cx = 1;
+//    cy = 1;
+//    skew = 0.2;
+
+//    t = {8, 8, 8};
+
+
 
 
     /// TASK: uncomment the line below to return true when testing your algorithm and in you final submission.
