@@ -267,7 +267,7 @@ bool CameraCalibration::calibration(
 
     // skew factor = -alpha * cot(theta)
 
-    skew = -fx * (cos(theta) / sin(theta));
+    skew = -fx * cos(theta);
     std::cout << "skew factor: " << skew << std::endl;
 
 
@@ -291,7 +291,7 @@ bool CameraCalibration::calibration(
 
 //    std::cout << "R: " << R << std::endl;
 
-    R(0, 0) = r1[1];
+    R(0, 0) = r1[0];
     R(0, 1) = r1[1];
     R(0, 2) = r1[2];
 
