@@ -201,7 +201,7 @@ bool CameraCalibration::calibration(
 
     // M = A b
 
-    // A = the three leftmost columns of M
+    // A = the three leftmost columns of M, b = column 4
     auto a1 = M.get_column(0);
     auto a2 = M.get_column(1);
     auto a3 = M.get_column(2);
@@ -218,6 +218,7 @@ bool CameraCalibration::calibration(
     float rho = 1 / norm(a3);
 
     std::cout << "rho: " << rho << std::endl;
+    std::cout << "norm(a3): " << norm(a3) << std::endl;
     std::cout << "M: " << M << std::endl;
 
     /// principal point (cx, cy)
@@ -272,15 +273,85 @@ bool CameraCalibration::calibration(
     // r1 = row 1 of R, etc.
 
     // r1 = (a2 x a3) / length(a2 x a3)
+    // r2 = r3 x r1
+    // r3 = rho * a3
 
+    auto r1 = cross(a2, a3) / norm(cross(a2, a3));
+    std::cout << "r1: " << r1 << std::endl;
 
+    auto r3 = rho * a3;
+    std::cout << "r3: " << r3 << std::endl;
+
+    auto r2 = cross(r3, r1);
+    std::cout << "r2: " << r2 << std::endl;
+
+//    std::cout << "R: " << R << std::endl;
+
+    R(0, 0) = r1[0];
+    R(1, 0) = r1[1];
+    R(2, 0) = r1[2];
+
+    R(0, 1) = r2[0];
+    R(1, 1) = r2[1];
+    R(2, 1) = r2[2];
+
+    R(0, 2) = r3[0];
+    R(1, 2) = r3[1];
+    R(2, 2) = r3[2];
+
+    std::cout << "R: " << R << std::endl;
 
     /// translation 3D vector t (camera location)
+
+    // t = rho * K^-1 * b
+
+    // K =  | fx    s     cx  |
+    //      | 0     fy    cy  |
+    //      | 0     0     1   |
+
+    Matrix<double> K(3, 3, 0.0);   // initialized with 0s
+
+    K(0, 0) = abs(fx);
+    K(0, 1) = skew;
+    K(0, 2) = cx;
+    K(1, 1) = fy;
+    K(1, 2) = cy;
+    K(2, 2) = 1.0;
+
+    std::cout << "K: " << K << std::endl;
+
+    Matrix<double> invK(3, 3);
+    inverse(K, invK);
+
+    // todo: is b then the last column of M?
+    auto b = M.get_column(3);
+    auto transpose = rho * invK * b;
+
+    std::cout << "inv K: " << invK << std::endl;
+    std::cout << "K * inv K: " << K * invK << std::endl;
+    std::cout << "transpose: " << transpose << std::endl;
+
+    t[0] = transpose[0];
+    t[1] = transpose[1];
+    t[2] = transpose[2];
+
+    std::cout << "t: " << t << std::endl;
+
+    // testing
+    fx = 1;
+    fy = 1;
+//    cx = 1;
+//    cy = 1;
+//    skew = 0.2;
+
+    t = {8, 8, 8};
+
+
 
 
     /// TASK: uncomment the line below to return true when testing your algorithm and in you final submission.
     // this draws a camera with the calculated M parameters
-    return false;
+    return true;
 
 
 
