@@ -241,7 +241,7 @@ bool CameraCalibration::calibration(
     //                  -------------------------------------
     //                  length(a1 x a3) dot length(a2 x a3) )
 
-    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ) );
+    float theta = acos(- ( (cross(a1, a3) * cross(a2, a3)) / (norm(cross(a1, a3)) * norm(cross(a2, a3))) ));
 
     std::cout << "theta: " << theta << std::endl;
 
