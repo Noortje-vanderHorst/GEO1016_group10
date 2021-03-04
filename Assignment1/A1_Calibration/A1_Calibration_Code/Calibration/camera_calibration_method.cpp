@@ -170,7 +170,7 @@ bool CameraCalibration::calibration(
     // scaling factor rho
     double rho =  (1 / norm(a3) );
     // sign of rho
-    if (M(3, 4) < 0){
+    if (M(2, 3) < 0){
         rho = rho * -1;
     }
 
