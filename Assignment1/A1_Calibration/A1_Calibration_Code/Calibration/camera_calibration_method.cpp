@@ -168,7 +168,11 @@ bool CameraCalibration::calibration(
     a3 = {a3[0], a3[1], a3[2]};
 
     // scaling factor rho
-    double rho =  1 / norm(a3);
+    double rho =  (1 / norm(a3) );
+    // sign of rho
+    if (M(3, 4) < 0){
+        rho = rho * -1;
+    }
 
     // principal point (cx, cy)
     auto u0 = pow(rho, 2) * a1 * a3;
