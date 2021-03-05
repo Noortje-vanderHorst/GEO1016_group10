@@ -22,6 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
 #include "camera_calibration.h"
 #include "matrix_algo.h"
 
@@ -51,6 +52,7 @@ bool CameraCalibration::calibration(
 {
     std::cout << std::endl; // extra space for clear output
 
+    auto startTime = std::chrono::high_resolution_clock::now();
 
     //check for duplicate and negative points in input:
     std::vector<int> duplicateLocations;
@@ -238,6 +240,10 @@ bool CameraCalibration::calibration(
     t[0] = t_T[0][0];
     t[1] = t_T[1][0];
     t[2] = t_T[2][0];
+
+    auto finishTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsedTime = finishTime - startTime;
+    std::cout << elapsedTime.count() << " s" << std::endl;
 
     return true;
 }
