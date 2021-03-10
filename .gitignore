@@ -6,9 +6,9 @@ Assignment1/A1_Calibration/A1_Calibration_Code
 
 ### Assignment 2 code
 # everyhting inside here
-#Assignment2/A2_Triangulation/A2_Triangulation_Code
+Assignment2/A2_Triangulation/A2_Triangulation_Code
 # except
-#!Assignment2/A2_Triangulation/A2_Triangulation_Code/Triangulation
+!Assignment2/A2_Triangulation/A2_Triangulation_Code/Triangulation
 
 ### LaTeX stuff
 # LaTeX temporary files
