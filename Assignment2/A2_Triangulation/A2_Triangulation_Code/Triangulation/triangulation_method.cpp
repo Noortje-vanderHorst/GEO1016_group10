@@ -55,20 +55,8 @@ Matrix<double> to_Matrix(const mat &M) {
 }
 
 
-/**
- * TODO: Finish this function for reconstructing 3D geometry from corresponding image points.
- * @return True on success, otherwise false. On success, the reconstructed 3D points must be written to 'points_3d'.
- */
-bool Triangulation::triangulation(
-        float fx, float fy,     /// input: the focal lengths (same for both cameras)
-        float cx, float cy,     /// input: the principal point (same for both cameras)
-        const std::vector<vec3> &points_0,    /// input: image points (in homogenous coordinates) in the 1st image.
-        const std::vector<vec3> &points_1,    /// input: image points (in homogenous coordinates) in the 2nd image.
-        std::vector<vec3> &points_3d,         /// output: reconstructed 3D points
-        mat3 &R,   /// output: recovered rotation of 2nd camera (used for updating the viewer and visual inspection)
-        vec3 &t    /// output: recovered translation of 2nd camera (used for updating the viewer and visual inspection)
-) const
-{
+/// comments and hints provided (we can just throw this whole thing away in the final version)
+void Comments(){
     /// NOTE: there might be multiple workflows for reconstructing 3D geometry from corresponding image points.
     ///       This assignment uses the commonly used one explained in our lecture.
     ///       It is advised to define a function for each sub-task. This way you have a clean and well-structured
@@ -170,16 +158,203 @@ bool Triangulation::triangulation(
     std::vector<double> last_column = W.get_column(W.cols() - 1);
 
     // TODO: delete all above demo code in the final submission
+}
 
+
+/// check input validity
+void test_input(){};
+
+
+/// Normalize input points
+std::vector<vec3> normalize_input(const std::vector<vec3> &points){
+    std::vector<vec3> pts_norm;
+
+    /// step 1: translation
+    // the origin of the new coordinate system should be located at the centroid of the image points
+
+    double x_coords = 0;    // total x coordinates
+    double y_coords = 0;    // total y coordinates
+    // not for z_coords, in this case the average should just be 1
+
+    double dist = 0;        // total distance to origin (0, 0, 0)
+
+    for (vec3 point : points){
+        // average x, y, (z) = centroid
+        x_coords += point.x;
+        y_coords += point.y;
+
+        // distance to origin == length
+        dist += point.length();
+    }
+
+    double x_av = x_coords / points.size();     // centroid x
+    double y_av = y_coords / points.size();     // centroid y
+
+    double dist_av = dist / points.size();      // mean distance to origin (before scaling)
+
+    mat3 T_trans(1.0f);   // translation transformation matrix, diagonal = 1 & rest = 0
+    T_trans(0, 2) = x_av;   // x translation
+    T_trans(1, 2) = y_av;   // y translation
+    // z translation is already 1
+
+    /// step 2: scaling
+    // the mean square distance of the transformed image points from the origin should be 2 pixels
+
+    double scaling_factor = 2 / dist_av;
+
+    /// normalize the points
+    // apply transformations to all points
+    for (vec3 point : points){
+        vec3 moved_pt = T_trans * point;
+        vec3 scaled_pt = scaling_factor * moved_pt;
+
+        pts_norm.push_back(scaled_pt);
+    }
+
+    return pts_norm;
+};
+
+
+/// Step 1: estimate fundamental matrix F
+mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
+
+    /// construct linear system W
+    // row of W:
+    // [ u u'       v u'        u'      u v'       v v'       v'      u       v       1   ]
+    // [ x0 x1      y0 x1       x1      x0 y1      y0 y1      y1      x0      y0      1   ]
+
+    //      0         1         2         3         4         5       6       7       8
+
+    // W size = n * 9
+    Matrix<double> W(pts0_norm.size(), 9, 0.0);
+
+    // fill W
+    for (int i = 0; i < pts0_norm.size(); ++i) {
+        vec3 pt0 = pts0_norm[i];
+        vec3 pt1 = pts1_norm[i];
+        std::vector<double> elem(9, 1.0);
+
+        elem[0] = pt0.x * pt1.x;
+        elem[1] = pt0.y * pt1.x;
+        elem[2] = pt1.x;
+        elem[3] = pt0.x * pt1.y;
+        elem[4] = pt0.y * pt1.y;
+        elem[5] = pt1.y;
+        elem[6] = pt0.x;
+        elem[7] = pt0.y;
+
+        W.set_row(elem, i);
+    }
+
+    /// solve Wf = 0 --> F'
+    // decompose matrix of size (m x n):
+    // U = (m x m)
+    // S = (m x n)
+    // V = (n x n)
+
+    int m = pts0_norm.size();
+    int n = 9;
+
+    Matrix<double> U_W(m, m, 0.0);   // initialized with 0s
+    Matrix<double> S_W(m, n, 0.0);   // initialized with 0s
+    Matrix<double> V_W(n, n, 0.0);   // initialized with 0s
+
+    // SVD decomposition of W
+    svd_decompose(W, U_W, S_W, V_W);
+
+    // F' from f (f = last column of V)
+    Matrix<double> F_e(3, 3, 0.0);    // initialized with 0s
+
+    // populate F'
+    for (int i = 0; i < 3; i ++){
+        for (int j = 0; j < 3; j++){
+            F_e(i,j) = V_W(i * 3 + j, 8);
+        }
+    }
+
+//    std::cout << "F': " << F_e << std::endl;
+
+    /// minimization & rank 2 --> F
+    // F' = U S' V^T
+    // where F' is minimized to approach F, and S has rank 2:
+    // S' --> S:
+    // S =  | s1   0    0  |
+    //      | 0    s2   0  |
+    //      | 0    0   [0] | <-- s3 = 0
+    // F = U S V^T
+
+    // decompose F' (3 x 3)
+    Matrix<double> U_F(3, 3, 0.0);   // initialized with 0s
+    Matrix<double> S_F(3, 3, 0.0);   // initialized with 0s
+    Matrix<double> V_F(3, 3, 0.0);   // initialized with 0s
+
+    // SVD decomposition of F'
+    svd_decompose(F_e, U_F, S_F, V_F);
+
+//    std::cout << "S: " << S_F << std::endl;
+
+    // enforce rank 2
+    S_F(2, 2) = 0.0;
+//    std::cout << "S rank 2: " << S_F << std::endl;
+
+    Matrix<double> svd_res = U_F * S_F * V_F;
+    mat3 F = to_mat3(svd_res);  // to fixed size for efficiency
+
+    // todo: F is known up to a scale, set the last element to 1.0
+
+    // todo: F is normalized, needs to be de-normalized
+
+    return F;
+}
+
+
+/// Step 2: Recover relative pose (R & t)
+
+
+/// Step 3: Determine the 3D coordinates
+
+
+/// construct linear system W
+
+
+
+/**
+ * TODO: Finish this function for reconstructing 3D geometry from corresponding image points.
+ * @return True on success, otherwise false. On success, the reconstructed 3D points must be written to 'points_3d'.
+ */
+bool Triangulation::triangulation(
+        float fx, float fy,     /// input: the focal lengths (same for both cameras)
+        float cx, float cy,     /// input: the principal point (same for both cameras)
+        const std::vector<vec3> &points_0,    /// input: image points (in homogenous coordinates) in the 1st image.
+        const std::vector<vec3> &points_1,    /// input: image points (in homogenous coordinates) in the 2nd image.
+        std::vector<vec3> &points_3d,         /// output: reconstructed 3D points
+        mat3 &R,   /// output: recovered rotation of 2nd camera (used for updating the viewer and visual inspection)
+        vec3 &t    /// output: recovered translation of 2nd camera (used for updating the viewer and visual inspection)
+) const
+{
     //--------------------------------------------------------------------------------------------------------------
     // implementation starts ...
 
     // TODO: check if the input is valid (always good because you never known how others will call your function).
+    test_input();
 
     // TODO: Estimate relative pose of two views. This can be subdivided into
-    //      - estimate the fundamental matrix F;
-    //      - compute the essential matrix E;
-    //      - recover rotation R and t.
+    //       - estimate the fundamental matrix F;
+
+    // normalize input points
+    std::vector<vec3> pts0_norm = normalize_input(points_0);
+    std::vector<vec3> pts1_norm = normalize_input(points_1);
+
+    // construct F
+    mat3 F = estimate_F(pts0_norm, pts1_norm);
+
+
+    // TODO: - compute the essential matrix E;
+
+
+    // TODO: - recover rotation R and t.
+
+
 
     // TODO: Reconstruct 3D points. The main task is
     //      - triangulate a pair of image points (i.e., compute the 3D coordinates for each corresponding point pair)
