@@ -26,6 +26,9 @@
 #include "matrix_algo.h"
 #include <easy3d/optimizer/optimizer_lm.h>
 
+// todo: added this, don't know if it's allowed though
+#include <tuple>
+
 
 using namespace easy3d;
 
@@ -166,8 +169,8 @@ void test_input(){};
 
 
 /// Normalize input points
-std::vector<vec3> normalize_input(const std::vector<vec3> &points){
-    std::vector<vec3> pts_norm;
+std::tuple<std::vector<vec3>, mat3> normalize_input(const std::vector<vec3> &points){
+    std::vector<vec3> pts_norm(points.size());  // same size as input
 
     /// step 1: translation
     // the origin of the new coordinate system should be located at the centroid of the image points
@@ -192,7 +195,7 @@ std::vector<vec3> normalize_input(const std::vector<vec3> &points){
 
     double dist_av = dist / points.size();      // mean distance to origin (before scaling)
 
-    mat3 T_trans(1.0f);   // translation transformation matrix, diagonal = 1 & rest = 0
+    mat3 T_trans(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
     T_trans(0, 2) = x_av;   // x translation
     T_trans(1, 2) = y_av;   // y translation
     // z translation is already 1
@@ -202,16 +205,23 @@ std::vector<vec3> normalize_input(const std::vector<vec3> &points){
 
     double scaling_factor = 2 / dist_av;
 
+    // needed to de-normalize in the end
+    mat3 T_scale(1.0f);
+    T_scale(0,0) = scaling_factor;  // x scaling
+    T_scale(1,1) = scaling_factor;  // y scaling
+    T_scale(2,2) = scaling_factor;  // z scaling
+
     /// normalize the points
+    mat3 T = T_scale * T_trans;
+
     // apply transformations to all points
     for (vec3 point : points){
-        vec3 moved_pt = T_trans * point;
-        vec3 scaled_pt = scaling_factor * moved_pt;
-
-        pts_norm.push_back(scaled_pt);
+        pts_norm.push_back(T * point);
     }
+    std::cout << "T:\n" << T << std::endl;
 
-    return pts_norm;
+    std::tuple<std::vector<vec3>, mat3> res = make_tuple(pts_norm, T);
+    return res;
 };
 
 
@@ -342,11 +352,15 @@ bool Triangulation::triangulation(
     //       - estimate the fundamental matrix F;
 
     // normalize input points
-    std::vector<vec3> pts0_norm = normalize_input(points_0);
-    std::vector<vec3> pts1_norm = normalize_input(points_1);
+    std::tuple<std::vector<vec3>, mat3 > norm_0 = normalize_input(points_0);
+    std::tuple<std::vector<vec3>, mat3 > norm_1 = normalize_input(points_1);
+    // get normalized points
+    std::vector<vec3> pts0_norm = std::get<0>(norm_0);
+    std::vector<vec3> pts1_norm = std::get<0>(norm_1);
 
     // construct F
     mat3 F = estimate_F(pts0_norm, pts1_norm);
+    // todo: de-normalize F
 
 
     // TODO: - compute the essential matrix E;
