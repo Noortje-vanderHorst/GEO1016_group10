@@ -318,12 +318,23 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
 
 
 /// Step 2: Recover relative pose (R & t)
+mat3 recover_E(mat3 F){
+    mat3 E;
+
+    return E;
+};
+
+
+std::tuple<mat3, vec3> relative_position(mat3 E){
+    mat3 R;
+    vec3 t;
+
+    return std::make_tuple(R, t);
+};
 
 
 /// Step 3: Determine the 3D coordinates
-
-
-/// construct linear system W
+void coords_3d(){};
 
 
 
@@ -347,8 +358,9 @@ bool Triangulation::triangulation(
     // TODO: check if the input is valid (always good because you never known how others will call your function).
     test_input();
 
-    // TODO: Estimate relative pose of two views. This can be subdivided into
-    //       - estimate the fundamental matrix F;
+    // TODO: Estimate relative pose of two views. This can be subdivided into:
+
+    // TODO: - estimate the fundamental matrix F;
 
     // normalize input points
     std::tuple<std::vector<vec3>, mat3 > norm0 = normalize_input(points_0);
@@ -366,12 +378,11 @@ bool Triangulation::triangulation(
     // de-normalize F
     mat3 F_norm = transpose(T_1) * F * T_0;
 
-
     // TODO: - compute the essential matrix E;
-
+    mat3 E = recover_E(F_norm);
 
     // TODO: - recover rotation R and t.
-
+    std::tuple<mat3, vec3> pos = relative_position(E);
 
 
     // TODO: Reconstruct 3D points. The main task is
