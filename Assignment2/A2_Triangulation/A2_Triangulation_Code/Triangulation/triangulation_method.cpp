@@ -169,10 +169,8 @@ void test_input(){};
 
 
 /// Normalize input points
-std::tuple<std::vector<vec3>, std::vector<vec3>, mat3> normalize_input(const std::vector<vec3> &points0,
-                                                                       const std::vector<vec3> &points1){
-    std::vector<vec3> pts0_norm(points0.size());  // same size as input
-    std::vector<vec3> pts1_norm(points0.size());  // same size as input
+std::tuple<std::vector<vec3>,  mat3> normalize_input(const std::vector<vec3> &points){
+    std::vector<vec3> pts_norm(points.size());  // same size as input
 
     /// step 1: translation
     // the origin of the new coordinate system should be located at the centroid of the image points
@@ -183,23 +181,19 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3> normalize_input(const std
 
     double dist = 0;        // total distance to origin (0, 0, 0)
 
-    for (int i = 0; i < points0.size(); ++i) {
+    for (vec3 point : points){
         // average x, y, (z) = centroid
-        x_coords += points0[i].x;
-        x_coords += points1[i].x;
-
-        y_coords += points0[i].y;
-        y_coords += points1[i].y;
+        x_coords += point.x;
+        y_coords += point.y;
 
         // distance to origin == length
-        dist += points0[i].length();
-        dist += points1[i].length();
+        dist += point.length();
     }
 
-    double x_av = x_coords / (points0.size() * 2);     // centroid x
-    double y_av = y_coords / (points0.size() * 2);     // centroid y
+    double x_av = x_coords / points.size();     // centroid x
+    double y_av = y_coords / points.size();     // centroid y
 
-    double dist_av = dist / (points0.size() * 2);      // mean distance to origin (before scaling)
+    double dist_av = dist / points.size();      // mean distance to origin (before scaling)
 
     mat3 T_trans(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
     T_trans(0, 2) = x_av;   // x translation
@@ -221,12 +215,11 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3> normalize_input(const std
     mat3 T = T_scale * T_trans;
 
     // apply transformations to all points
-    for (int i = 0; i < points0.size(); ++i){
-        pts0_norm.push_back(T * points0[i]);
-        pts1_norm.push_back(T * points1[i]);
+    for (vec3 point : points){
+        pts_norm.push_back(T * point);
     }
 
-    std::tuple<std::vector<vec3>, std::vector<vec3>, mat3> res = make_tuple(pts0_norm, pts1_norm, T);
+    std::tuple<std::vector<vec3>, mat3> res = make_tuple(pts_norm, T);
     return res;
 };
 
@@ -316,11 +309,11 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     Matrix<double> svd_res = U_F * S_F * V_F;
     mat3 F = to_mat3(svd_res);  // to fixed size for efficiency
 
-    // todo: F is known up to a scale, set the last element to 1.0
+    // element-wise division to rescale F so the last element is 1
+    // (it is only known up to a scale, we want scale=1)
+    mat3 F_resc = F / F(2,2);
 
-    // todo: F is normalized, needs to be de-normalized
-
-    return F;
+    return F_resc;
 }
 
 
@@ -358,17 +351,20 @@ bool Triangulation::triangulation(
     //       - estimate the fundamental matrix F;
 
     // normalize input points
-    std::tuple<std::vector<vec3>, std::vector<vec3>, mat3 > norm = normalize_input(points_0, points_1);
+    std::tuple<std::vector<vec3>, mat3 > norm0 = normalize_input(points_0);
+    std::tuple<std::vector<vec3>, mat3 > norm1 = normalize_input(points_1);
 
     // get normalized points
-    std::vector<vec3> pts0_norm = std::get<0>(norm);
-    std::vector<vec3> pts1_norm = std::get<1>(norm);
-    // get transformation matrix that was used for the normalization
-    mat3 T = std::get<2>(norm);
+    std::vector<vec3> pts0_norm = std::get<0>(norm0);
+    std::vector<vec3> pts1_norm = std::get<0>(norm1);
+    // get normalization transformation matrices
+    mat3 T_0 = std::get<1>(norm0);
+    mat3 T_1 = std::get<1>(norm1);
 
     // construct F
     mat3 F = estimate_F(pts0_norm, pts1_norm);
-    // todo: de-normalize F
+    // de-normalize F
+    mat3 F_norm = transpose(T_1) * F * T_0;
 
 
     // TODO: - compute the essential matrix E;
