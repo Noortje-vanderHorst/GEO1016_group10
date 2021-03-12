@@ -326,8 +326,8 @@ mat3 recover_E(mat3 F){
 
 
 std::tuple<mat3, vec3> relative_position(mat3 E){
-    mat3 R;
-    vec3 t;
+    mat3 R(1.0f);
+    vec3 t = {0, 0, 0};
 
     return std::make_tuple(R, t);
 };
@@ -360,8 +360,7 @@ bool Triangulation::triangulation(
 
     // TODO: Estimate relative pose of two views. This can be subdivided into:
 
-    // TODO: - estimate the fundamental matrix F;
-
+    /// estimate the fundamental matrix F
     // normalize input points
     std::tuple<std::vector<vec3>, mat3 > norm0 = normalize_input(points_0);
     std::tuple<std::vector<vec3>, mat3 > norm1 = normalize_input(points_1);
@@ -383,6 +382,8 @@ bool Triangulation::triangulation(
 
     // TODO: - recover rotation R and t.
     std::tuple<mat3, vec3> pos = relative_position(E);
+    R = std::get<0>(pos);
+    t = std::get<1>(pos);
 
 
     // TODO: Reconstruct 3D points. The main task is
@@ -398,5 +399,12 @@ bool Triangulation::triangulation(
     //          - function not implemented yet;
     //          - input not valid (e.g., not enough points, point numbers don't match);
     //          - encountered failure in any step.
+
+    // just for testing!
+    for (int i = 0; i < points_0.size(); ++i) {
+        points_3d.push_back(points_0[i]);
+        points_3d.push_back(points_1[i]);
+    }
+
     return points_3d.size() > 0;
 }
