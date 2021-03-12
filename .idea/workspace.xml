@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
-    <generated>
-      <config projectName="A2_Triangulation_Code" targetName="3rd_cminpack" />
-      <config projectName="A2_Triangulation_Code" targetName="3rd_glog" />
-      <config projectName="A2_Triangulation_Code" targetName="easy3d_core" />
-      <config projectName="A2_Triangulation_Code" targetName="3rd_glfw" />
-      <config projectName="A2_Triangulation_Code" targetName="easy3d_optimizer" />
-      <config projectName="A2_Triangulation_Code" targetName="easy3d_viewer" />
-      <config projectName="A2_Triangulation_Code" targetName="easy3d_util" />
-      <config projectName="A2_Triangulation_Code" targetName="3rd_glew" />
-      <config projectName="A2_Triangulation_Code" targetName="easy3d_fileio" />
-      <config projectName="A2_Triangulation_Code" targetName="Triangulation" />
-      <config projectName="A2_Triangulation_Code" targetName="Tutorial_NonlinearLeastSquares" />
-    </generated>
+    <generated />
   </component>
   <component name="CMakeSettings">
     <configurations>
@@ -21,11 +9,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="72165f38-9297-486b-a239-3377dd2fb7dd" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/GEO1016_group10.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/GEO1016_group10.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assignment2/A2_Triangulation/A2_Triangulation_Code/Triangulation/triangulation_method.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Assignment2/A2_Triangulation/A2_Triangulation_Code/Triangulation/triangulation_method.cpp" afterDir="false" />
-    </list>
+    <list default="true" id="72165f38-9297-486b-a239-3377dd2fb7dd" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -34,7 +18,6 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -44,92 +27,11 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
-    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="cf.first.check.clang-format" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/Assignment2/A2_Triangulation/A2_Triangulation_Code/CMakeLists.txt" />
-  </component>
-  <component name="RunManager" selected="CMake Application.Triangulation">
-    <configuration name="3rd_cminpack" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="3rd_cminpack" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="3rd_glew" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="3rd_glew" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="3rd_glfw" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="3rd_glfw" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="3rd_glog" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="3rd_glog" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Triangulation" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="Triangulation" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="A2_Triangulation_Code" RUN_TARGET_NAME="Triangulation">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Tutorial_NonlinearLeastSquares" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="Tutorial_NonlinearLeastSquares" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="A2_Triangulation_Code" RUN_TARGET_NAME="Tutorial_NonlinearLeastSquares">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="easy3d_core" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="easy3d_core" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="easy3d_fileio" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="easy3d_fileio" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="easy3d_optimizer" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="easy3d_optimizer" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="easy3d_util" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="easy3d_util" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="easy3d_viewer" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="A2_Triangulation_Code" TARGET_NAME="easy3d_viewer" CONFIG_NAME="Debug">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.cpp.gradle.execution.GradleNativeBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <list>
-      <item itemvalue="CMake Application.3rd_cminpack" />
-      <item itemvalue="CMake Application.3rd_glew" />
-      <item itemvalue="CMake Application.3rd_glfw" />
-      <item itemvalue="CMake Application.3rd_glog" />
-      <item itemvalue="CMake Application.easy3d_core" />
-      <item itemvalue="CMake Application.easy3d_fileio" />
-      <item itemvalue="CMake Application.easy3d_optimizer" />
-      <item itemvalue="CMake Application.easy3d_util" />
-      <item itemvalue="CMake Application.easy3d_viewer" />
-      <item itemvalue="CMake Application.Triangulation" />
-      <item itemvalue="CMake Application.Tutorial_NonlinearLeastSquares" />
-    </list>
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -141,8 +43,6 @@
       <updated>1614257276716</updated>
       <workItem from="1614257280163" duration="509000" />
       <workItem from="1614528806432" duration="46000" />
-      <workItem from="1615383850362" duration="1927000" />
-      <workItem from="1615564889177" duration="13510000" />
     </task>
     <servers />
   </component>
