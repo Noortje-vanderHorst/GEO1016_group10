@@ -200,6 +200,8 @@ std::tuple<std::vector<vec3>,  mat3> normalize_input(const std::vector<vec3> &po
     T_trans(1, 2) = y_av;   // y translation
     // z translation is already 1
 
+    // todo: "substracts the center" in discord, did I do this in the wrong direction?
+
     /// step 2: scaling
     // the mean square distance of the transformed image points from the origin should be 2 pixels
 
@@ -309,27 +311,136 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     Matrix<double> svd_res = U_F * S_F * V_F;
     mat3 F = to_mat3(svd_res);  // to fixed size for efficiency
 
-    // element-wise division to rescale F so the last element is 1
-    // (it is only known up to a scale, we want scale=1)
-    mat3 F_resc = F / F(2,2);
-
-    return F_resc;
+    return F;
 }
 
 
 /// Step 2: Recover relative pose (R & t)
-mat3 recover_E(mat3 F){
-    mat3 E;
+vec3 triangulate (vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
+    vec3 point_3d;
 
-    return E;
+    return point_3d;
+}
+
+
+std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3 K,
+                                               std::vector<vec3> pts0,
+                                               std::vector<vec3> pts1){
+    std::cout << "R1:\n" << R01 << std::endl;
+    std::cout << "R2:\n" << R02 << std::endl;
+
+    std::cout << "det R1:\n" << determinant(R01) << std::endl;
+    std::cout << "det R2:\n" << determinant(R02) << std::endl;
+
+    std::cout << "u3: " << u3 << std::endl;
+
+    // determinant of R has to be positive
+    mat3 R1 = determinant(R01) * R01;
+    mat3 R2 = determinant(R02) * R02;
+
+    // possible ts
+    vec3 t1 = u3;
+    vec3 t2 = -u3;
+
+    // for all 4 possible combinations of R and t
+    // see which one gives the most 3d points that are in front of both cameras
+    mat3 R_best;
+    vec3 t_best;
+
+    int cnt_max = 0;
+    mat3 R_curr = R1;
+    vec3 t_curr = t1;
+
+    for (int sit = 0; sit < 4; ++sit) {
+        int cnt = 0;
+
+        // situation selection:
+        // sit 0 = R1 t1
+        // sit 1 = R2 t1
+        // sit 2 = R1 t2
+        // sit 3 = R2 t2
+        if (sit == 1){
+            R_curr = R2;
+        }
+        if (sit == 2){
+            R_curr = R1;
+            t_curr = t2;
+        }
+        if (sit == 3){
+            R_curr = R2;
+        }
+        for (int i = 0; i < pts0.size(); ++i) {
+            // triangulate the point-pair
+            vec3 pt_3d = triangulate(pts0[i], pts1[i], K, R_curr, t_curr);
+
+            // find if the point is in front of both cameras
+            // todo: this is not 0 twice, but the z coordinate of both cameras
+            if (pt_3d.z > 0 && pt_3d.z > 0){
+                cnt ++;
+            }
+        }
+        // if more points are in front of both cameras in this situation
+        if (cnt > cnt_max){
+            cnt_max = cnt;
+            R_best = R_curr;
+            t_best = t_curr;
+        }
+    }
+
+    return std::make_tuple(R_best, t_best);
 };
 
 
-std::tuple<mat3, vec3> relative_position(mat3 E){
-    mat3 R(1.0f);
-    vec3 t = {0, 0, 0};
+std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> points_0, std::vector<vec3> points_1){
+    // determine relative position image 1 to image 0
+    // as translation t and rotation R
 
-    return std::make_tuple(R, t);
+    // W =  |   0  -1   0   |      Z =  |   0   1   0   |
+    //      |   1   0   0   |           |  -1   0   0   |
+    //      |   0   0   1   |           |   0   0   0   |
+
+    mat3 W = {0, -1, 0, 1, 0, 0, 0, 0, 1};
+    mat3 Z = {0, 1, 0, -1, 0, 0, 0, 0, 0};
+
+    std::cout << "W:\n" << W << std::endl;
+    std::cout << "Z:\n" << Z << std::endl;
+
+    // E = U S V^T
+    // E = [t]x R
+
+    // [t]x = U Z U^T
+    // t = +- u3
+    // R = U W V^T or U W^T V^T
+
+    // SVD decomposition of E
+    Matrix<double> U_mat(3, 3, 0.0);
+    Matrix<double> S_mat(3, 3, 0.0);
+    Matrix<double> V_mat(3, 3, 0.0);
+
+    Matrix<double> E_mat = to_Matrix(E);
+    svd_decompose(E_mat, U_mat, S_mat, V_mat);
+
+    std::cout << "U:\n" << U_mat << std::endl;
+    std::cout << "S:\n" << S_mat << std::endl;
+    std::cout << "V^T:\n" << V_mat << std::endl;
+
+    std::cout << "E:\n" << E << std::endl;
+
+    mat3 U = to_mat3(U_mat);
+    mat3 S = to_mat3(S_mat);
+    mat3 V = to_mat3(V_mat);
+
+    // rotation R
+    mat3 R1 = U * W * V;
+    mat3 R2 = U * transpose(W) * V;
+
+    // translation t
+    vec3 u3 = U.col(2);
+
+    // R and t, both in the correct direction
+    std::tuple<mat3, vec3> rel_pos_corr = correct_direction_poses(R1, R2, u3, K, points_0, points_1);
+
+    return rel_pos_corr;
 };
 
 
@@ -373,15 +484,30 @@ bool Triangulation::triangulation(
     mat3 T_1 = std::get<1>(norm1);
 
     // construct F
-    mat3 F = estimate_F(pts0_norm, pts1_norm);
+    mat3 F_init = estimate_F(pts0_norm, pts1_norm);
     // de-normalize F
-    mat3 F_norm = transpose(T_1) * F * T_0;
+    mat3 F_norm = transpose(T_1) * F_init * T_0;
+    // rescale F
+    mat3 F = F_norm / F_norm(2,2);
 
-    // TODO: - compute the essential matrix E;
-    mat3 E = recover_E(F_norm);
+    /// compute the essential matrix E;
+    // construct K from input intrinsic parameters
+    // K =  |   fx    skew    cx   |
+    //      |   0      fy     cy   |
+    //      |   0      0       1   |
+    mat3 K(1.0f);
+    K(0,0) = fx;
+    K(1,1) = fy;
+    K(0,2) = cx;
+    K(1,2) = cy;
+
+    // E = K^T F K  --> intrinsics are known
+    // difference E and F: F is image coordinates, E = camera coordinates
+    // K' = K according to assignment
+    mat3 E = transpose(K) * F * K;
 
     // TODO: - recover rotation R and t.
-    std::tuple<mat3, vec3> pos = relative_position(E);
+    std::tuple<mat3, vec3> pos = relative_position(E, K, points_0, points_1);
     R = std::get<0>(pos);
     t = std::get<1>(pos);
 
