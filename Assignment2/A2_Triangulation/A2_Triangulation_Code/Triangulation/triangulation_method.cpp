@@ -170,7 +170,7 @@ void test_input(){};
 
 /// Normalize input points
 std::tuple<std::vector<vec3>,  mat3> normalize_input(const std::vector<vec3> &points){
-    std::vector<vec3> pts_norm(points.size());  // same size as input
+    std::vector<vec3> pts_norm;  // same size as input
 
     /// step 1: translation
     // the origin of the new coordinate system should be located at the centroid of the image points
@@ -179,37 +179,42 @@ std::tuple<std::vector<vec3>,  mat3> normalize_input(const std::vector<vec3> &po
     double y_coords = 0;    // total y coordinates
     // not for z_coords, in this case the average should just be 1
 
-    double dist = 0;        // total distance to origin (0, 0, 0)
-
     for (vec3 point : points){
         // average x, y, (z) = centroid
         x_coords += point.x;
         y_coords += point.y;
-
-        // distance to origin == length
-        dist += point.length();
     }
 
     double x_av = x_coords / points.size();     // centroid x
     double y_av = y_coords / points.size();     // centroid y
 
-    double dist_av = dist / points.size();      // mean distance to origin (before scaling)
+    double dist = 0;        // total distance to origin (centroid), after translation
+    for (vec3 point : points){
+        double x_diff = point.x - x_av;
+        double y_diff = point.y - y_av;
 
+        dist += sqrt(pow(x_diff, 2) + pow(y_diff, 2));
+    }
 
+    double dist_av = dist / points.size();
 
     /// step 2: scaling and translating
     mat3 T(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
 
+    mat3 T_scale(1.0f);
+    mat3 T_trans(1.0f);
+
     // the mean square distance of the transformed image points from the origin should be 2 pixels
     double scaling_factor = sqrt(2) / dist_av;
 
-    T(0, 2) = -scaling_factor * x_av;   // x translation
-    T(1, 2) = -scaling_factor * y_av;   // y translation
+    T_trans(0, 2) = - x_av;   // x translation
+    T_trans(1, 2) = - y_av;   // y translation
 
-    T(0,0) = scaling_factor;  // x scaling
-    T(1,1) = scaling_factor;  // y scaling
+    T_scale(0,0) = scaling_factor;  // x scaling
+    T_scale(1,1) = scaling_factor;  // y scaling
 
     // z scaling/translation should just remain 1
+    T = T_scale * T_trans;
 
     /// normalize the points
     // apply transformations to all points
@@ -568,18 +573,35 @@ bool Triangulation::triangulation(
 //    mat3 F = F_norm;
 //    F(2,2) = 1.0;
 
-//    Matrix<double> F_test = to_Matrix(F);
-//    Matrix<double> ptest0(3, 1, 0.0);
-//    ptest0.set_column({points_0[0].x, points_0[0].y, points_0[0].z}, 0);
-//    Matrix<double> ptest1(1, 3, 0.0);
-//    ptest1.set_row({points_1[0].x, points_1[0].y, points_1[0].z}, 0);
 
-//    std::cout << "ptest0: " << ptest0 << std::endl;
-//    std::cout << "ptest1: " << ptest1 << std::endl;
+    std::cout << "points norm 0:" << std::endl;
+    for (int i = 0; i < points_0.size(); ++i) {
+        std::cout << pts0_norm[i] << " <> " << points_0[i] << std::endl;
+    }
+    std::cout << "points norm 0:" << std::endl;
+    for (vec3 point : pts0_norm){
+        std::cout << point << std::endl;
+    }
+    std::cout << "points norm 1:" << std::endl;
+    for (int i = 0; i < points_0.size(); ++i) {
+        std::cout << pts1_norm[i] << " <> " << points_1[i] << std::endl;
+    }
 
-//    Matrix<double> testF = ptest1 * F_test * ptest0 ;
+    std::cout << "F:\n" << F << std::endl;
 
-//    std::cout << "test F:" << testF << std::endl;
+    Matrix<double> F_test = to_Matrix(F);
+    Matrix<double> ptest0(3, 1, 0.0);
+    ptest0.set_column({points_0[0].x, points_0[0].y, points_0[0].z}, 0);
+    Matrix<double> ptest1(1, 3, 0.0);
+    ptest1.set_row({points_1[0].x, points_1[0].y, points_1[0].z}, 0);
+
+    std::cout << "ptest0: " << ptest0 << std::endl;
+    std::cout << "ptest1: " << ptest1 << std::endl;
+
+    Matrix<double> testF = ptest1 * F_test * ptest0 ;
+
+    std::cout << "test F:" << testF << std::endl;
+
 
     /// compute the essential matrix E;
     // construct K from input intrinsic parameters
