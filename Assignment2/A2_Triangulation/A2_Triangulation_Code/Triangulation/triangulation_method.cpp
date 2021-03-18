@@ -169,76 +169,103 @@ void test_input(){};
 
 
 /// Normalize input points
-std::tuple<std::vector<vec3>,  mat3> normalize_input(const std::vector<vec3> &points){
-    std::vector<vec3> pts_norm;  // same size as input
+std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all(const std::vector<vec3> &points0,
+                                                                                 const std::vector<vec3> &points1){
+    std::vector<vec3> pts_norm0;
+    std::vector<vec3> pts_norm1;
 
     /// step 1: translation
     // the origin of the new coordinate system should be located at the centroid of the image points
 
-    double x_coords = 0;    // total x coordinates
-    double y_coords = 0;    // total y coordinates
+    double x_coords0 = 0;    // total x coordinates
+    double y_coords0 = 0;    // total y coordinates
+    double z_coords0 = 0;    // total z coordinates
+
+    double x_coords1 = 0;    // total x coordinates
+    double y_coords1 = 0;    // total y coordinates
+    double z_coords1 = 0;    // total z coordinates
     // not for z_coords, in this case the average should just be 1
 
-    for (vec3 point : points){
+    for (int i = 0; i < points0.size(); ++i) {
         // average x, y, (z) = centroid
-        x_coords += point.x;
-        y_coords += point.y;
+        x_coords0 += points0[i].x;
+        x_coords1 += points1[i].x;
+
+        y_coords0 += points0[i].y;
+        y_coords1 += points1[i].y;
+
+        z_coords0 += points0[i].z;
+        z_coords1 += points1[i].z;
     }
 
-    double x_av = x_coords / points.size();     // centroid x
-    double y_av = y_coords / points.size();     // centroid y
+    double x_av0 = x_coords0 / (points0.size());     // centroid x
+    double x_av1 = x_coords1 / (points0.size());     // centroid x
+    double y_av0 = y_coords0 / (points0.size());     // centroid y
+    double y_av1 = y_coords1 / (points0.size());     // centroid y
+    double z_av0 = z_coords0 / (points0.size());     // centroid z
+    double z_av1 = z_coords1 / (points0.size());     // centroid z
 
-    double dist = 0;        // total distance to origin (centroid), after translation
-    for (vec3 point : points){
-        double x_diff = point.x - x_av;
-        double y_diff = point.y - y_av;
+    double dist0 = 0;        // total distance to origin (centroid), after translation
+    for (vec3 point : points0){
+        double x_diff = point.x - x_av0;
+        double y_diff = point.y - y_av0;
+        double z_diff = point.z - z_av0;
 
-        dist += sqrt(pow(x_diff, 2) + pow(y_diff, 2));
+        dist0 += sqrt(pow(x_diff, 2) + pow(y_diff, 2) + pow(z_diff, 2));
+    }
+    double dist1 = 0;
+    for (vec3 point : points1){
+        double x_diff = point.x - x_av1;
+        double y_diff = point.y - y_av1;
+        double z_diff = point.z - z_av1;
+
+        dist1 += sqrt(pow(x_diff, 2) + pow(y_diff, 2) + pow(z_diff, 2));
     }
 
-    double dist_av = dist / points.size();
+    double dist0_av = dist0 / points0.size();
+    double dist1_av = dist1 / points0.size();
 
     /// step 2: scaling and translating
-    mat3 T(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
+    mat3 T0(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
+    mat3 T1(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
 
-    mat3 T_scale(1.0f);
-    mat3 T_trans(1.0f);
+    mat3 T0_scale(1.0f);
+    mat3 T1_scale(1.0f);
+
+    mat3 T0_trans(1.0f);
+    mat3 T1_trans(1.0f);
 
     // the mean square distance of the transformed image points from the origin should be 2 pixels
-    double scaling_factor = sqrt(2) / dist_av;
+    double scaling_factor0 = sqrt(2) / dist0_av;
+    double scaling_factor1 = sqrt(2) / dist1_av;
 
-    T_trans(0, 2) = - x_av;   // x translation
-    T_trans(1, 2) = - y_av;   // y translation
-//    T_trans(2, 2) =  -1.0;   // z translation
+    T0_trans(0, 2) = - x_av0;   // x translation
+    T0_trans(1, 2) = - y_av0;   // y translation
 
-    T_scale(0,0) = scaling_factor;  // x scaling
-    T_scale(1,1) = scaling_factor;  // y scaling
-    T_scale(2,2) = scaling_factor;  // z scaling
+    T1_trans(0, 2) = - x_av1;   // x translation
+    T1_trans(1, 2) = - y_av1;   // y translation
+
+    T0_scale(0,0) = scaling_factor0;  // x scaling
+    T0_scale(1,1) = scaling_factor0;  // y scaling
+
+    T1_scale(0,0) = scaling_factor1;  // x scaling
+    T1_scale(1,1) = scaling_factor1;  // y scaling
 
     // z scaling/translation should just remain 1
-    T = T_scale * T_trans;
+    T0 = T0_scale * T0_trans;
+    T1 = T1_scale * T1_trans;
 
     /// normalize the points
     // apply transformations to all points
-    for (vec3 point : points){
-//        std::cout << "point norm:\n" << point << std::endl;
-//        std::cout << "point norm * T:\n" << T * point << std::endl;
+    for (int i = 0; i < points0.size(); ++i) {
+        vec3 res0 = T0 * points0[i];
+        pts_norm0.push_back(res0 / res0.z);
 
-//        Matrix<double> T_mat = to_Matrix(T);
-//        Matrix<double> point_mat(3,1);
-//        point_mat.set_column({point.x, point.y, point.z}, 0);
-//        Matrix<double> res_hom = T_mat * point_mat;
-//        vec3 res = {float(res_hom(0,0)), float(res_hom(1,0)), float(res_hom(2,0))};
-
-        vec3 res = T * point;
-//        std::cout << "not hom:\n" << res_hom / res_hom.z << std::endl;
-//        std::cout << "point res:\n" << res << std::endl;
-
-        // todo: hom to cartessian according to liangliang
-        pts_norm.push_back(res /  res.z);
+        vec3 res1 = T1 * points1[i];
+        pts_norm1.push_back(res1 / res1.z);
     }
 
-    std::tuple<std::vector<vec3>, mat3> res = make_tuple(pts_norm, T);
+    std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> res = make_tuple(pts_norm0, pts_norm1, T0, T1);
     return res;
 };
 
@@ -293,15 +320,13 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     // F' from f (f = last column of V)
     Matrix<double> F_e(3, 3, 0.0);    // initialized with 0s
 
+    Matrix<double> V_W_T = transpose(V_W);
     // populate F'
     for (int i = 0; i < 3; i ++){
         for (int j = 0; j < 3; j++){
             F_e(i,j) = V_W(i * 3 + j, 8);
         }
     }
-
-//    std::cout << "V_W:\n" << V_W << std::endl;
-//    std::cout << "F': " << F_e << std::endl;
 
     /// minimization & rank 2 --> F
     // F' = U S' V^T
@@ -320,13 +345,10 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     // SVD decomposition of F'
     svd_decompose(F_e, U_F, S_F, V_F);
 
-//    std::cout << "S_F: " << S_F << std::endl;
-
     // enforce rank 2
     S_F(2, 2) = 0.0;
-//    std::cout << "S_F rank 2: " << S_F << std::endl;
 
-    Matrix<double> svd_res = U_F * S_F * V_F;
+    Matrix<double> svd_res = U_F * S_F * transpose(V_F);
     mat3 F = to_mat3(svd_res);  // to fixed size for efficiency
 
     return F;
@@ -335,9 +357,6 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
 
 /// Step 2: Recover relative pose (R & t)
 vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
-
-//    std::cout << "R current:\n" << R << std::endl;
-//    std::cout << "t current:\n" << t << std::endl;
 
     // P --> MP = | u |      P --> M'P = | u' |
     //            | v |                  | v' |
@@ -359,14 +378,6 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
     M1.set_col(3, t);
     M1 = K * M1;
 
-//    vec3 point0_c = inverse(K) * point0;
-//    vec3 point1_c = inverse(K) * point1;
-
-//    std::cout << "point 0: " << point0 << std::endl;
-//    std::cout << "point 1: " << point1 << std::endl;
-//    std::cout << "point 0 canon: " << point0_c << std::endl;
-//    std::cout << "point 1 canon: " << point1_c << std::endl;
-
     // fill A
     Matrix<double> A(4, 4, 0.0);
     vec4 elem00 = point0.x * M0.row(2) - M0.row(0);
@@ -374,24 +385,12 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
     vec4 elem20 = point1.x * M1.row(2) - M1.row(0);
     vec4 elem30 = point1.y * M1.row(2) - M1.row(1);
 
-//    elem00 = elem00 / norm(elem00);
-//    elem10 = elem10 / norm(elem10);
-//    elem20 = elem20 / norm(elem20);
-//    elem30 = elem30 / norm(elem30);
-
-//    std::cout << "elem 00:\n" << elem00 << std::endl;
-//    std::cout << "elem 10:\n" << elem10 << std::endl;
-//    std::cout << "elem 20:\n" << elem20 << std::endl;
-//    std::cout << "elem 30:\n" << elem30 << std::endl;
-
     for (int i = 0; i < 4; ++i) {
         A(0,i) = elem00[i];
         A(1,i) = elem10[i];
         A(2,i) = elem20[i];
         A(3,i) = elem30[i];
     }
-
-//    std::cout << "A:\n" << A << std::endl;
 
     int h = A.rows();
     int w = A.cols();
@@ -402,153 +401,15 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
 
     svd_decompose(A, U, S, V);
 
-//    std::cout << "U (A):\n" << U << std::endl;
-//    std::cout << "S (A):\n" << S << std::endl;
-//    std::cout << "V (A):\n" << V << std::endl;
+    Matrix<double> V_T = transpose(V);
 
     Matrix<double> P(4, 1, 0.0);
     for (int i = 0; i < 4; ++i) {
         P(i,0) = V(i, w-1);
     }
-//    std::cout << "P:\n" << P << std::endl;
-//    std::cout << "P norm:\n" << P / P(3, 0) << std::endl;
-//
-//    std::cout << "A * P:\n" << A * P << std::endl;
-//    std::cout << "A * P_norm:\n" << A * (P / P(3,0)) << std::endl;
 
     Matrix<double> res = (P / P(3,0));
     vec3 point_3d = {float(res(0,0)), float(res(1,0)), float(res(2,0))};
-
-//    point_3d = K * point_3d;
-
-//    vec4 point_3d_hom = {float(P(0,0)), float(P(1,0)), float(P(2,0)), float(P(3,0))};
-//
-//    vec3 backpt0 = M0 * point_3d_hom;
-//    vec3 backpt1 = M1 * point_3d_hom;
-//
-//    std::cout << "point 0 current:\n" << point0 << std::endl;
-//    std::cout << "point 1 current:\n" << point1 << std::endl;
-//
-//    std::cout << "M0 * P: " << backpt0.x / backpt0.z << " , " << backpt0.y / backpt0.z << std::endl;
-//    std::cout << "M1 * P: " << backpt1.x / backpt1.z << " , " << backpt1.y / backpt1.z << std::endl;
-
-    return point_3d;
-}
-
-vec3 triangulate_linear_print(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
-
-//    std::cout << "R current:\n" << R << std::endl;
-//    std::cout << "t current:\n" << t << std::endl;
-
-    // P --> MP = | u |      P --> M'P = | u' |
-    //            | v |                  | v' |
-    //            | 1 |                  | 1  |
-
-    // projection matrices of the two cameras (M & M' or M0 & M1 here)
-
-    // M = K[I 0]
-    mat34 M0(1.0f);
-    M0(2,3) = 0.0;
-    M0 = K * M0;
-
-    // M' = K'[R t]
-    mat34 M1(1.0f);
-    for (int i = 0; i < R.num_rows(); ++i) {
-        vec3 row = R.row(i);
-        M1.set_row(i, vec4(row.x, row.y, row.z, 0.0));
-    }
-    M1.set_col(3, t);
-    M1 = K * M1;
-
-    vec3 point0_c = inverse(K) * point0;
-    vec3 point1_c = inverse(K) * point1;
-
-    std::cout << "point 0: " << point0 << std::endl;
-    std::cout << "point 0 canon: " << point0_c << std::endl;
-    std::cout << "point 1: " << point1 << std::endl;
-    std::cout << "point 1 canon: " << point1_c << std::endl;
-
-    // fill A
-    Matrix<double> A(4, 4, 0.0);
-    vec4 elem00 = point0_c.x * M0.row(2) - M0.row(0);
-    vec4 elem10 = point0_c.y * M0.row(2) - M0.row(1);
-    vec4 elem20 = point1_c.x * M1.row(2) - M1.row(0);
-    vec4 elem30 = point1_c.y * M1.row(2) - M1.row(1);
-
-    elem00 = elem00 / norm(elem00);
-    elem10 = elem10 / norm(elem10);
-    elem20 = elem20 / norm(elem20);
-    elem30 = elem30 / norm(elem30);
-
-//    std::cout << "elem 00:\n" << elem00 << std::endl;
-//    std::cout << "elem 10:\n" << elem10 << std::endl;
-//    std::cout << "elem 20:\n" << elem20 << std::endl;
-//    std::cout << "elem 30:\n" << elem30 << std::endl;
-
-    for (int i = 0; i < 4; ++i) {
-        A(0,i) = elem00[i];
-        A(1,i) = elem10[i];
-        A(2,i) = elem20[i];
-        A(3,i) = elem30[i];
-    }
-
-    std::cout << "A:\n" << A << std::endl;
-
-    int h = A.rows();
-    int w = A.cols();
-
-    Matrix<double> U(h, h, 0.0);
-    Matrix<double> S(h, w, 0.0);
-    Matrix<double> V(w, w, 0.0);
-
-    svd_decompose(A, U, S, V);
-
-    std::cout << "U (A):\n" << U << std::endl;
-    std::cout << "S (A):\n" << S << std::endl;
-    std::cout << "V (A):\n" << V << std::endl;
-
-    Matrix<double> P(4, 1, 0.0);
-    for (int i = 0; i < 4; ++i) {
-        P(i,0) = V(i, w-1);
-    }
-    std::cout << "P:\n" << P << std::endl;
-    std::cout << "P norm:\n" << P / P(3, 0) << std::endl;
-
-    std::cout << "A * P:\n" << A * P << std::endl;
-    std::cout << "A * P_norm:\n" << A * (P / P(3,0)) << std::endl;
-
-    Matrix<double> res = (P / P(3,0));
-    vec3 point_3d = {float(res(0,0)), float(res(1,0)), float(res(2,0))};
-
-//    vec4 point_3d_hom = {float(P(0,0)), float(P(1,0)), float(P(2,0)), float(P(3,0))};
-//    vec4 point_3d_hom = {float(res(0,0)), float(res(1,0)), float(res(2,0)), 1.0};
-//
-//    vec3 backpt0 = M0 * point_3d_hom;
-//    vec3 backpt1 = M1 * point_3d_hom;
-//
-//    std::cout << "point 0 current:\n" << point0 << std::endl;
-//    std::cout << "point 1 current:\n" << point1 << std::endl;
-//
-//    std::cout << "M0 * P: " << backpt0.x / backpt0.z << " , " << backpt0.y / backpt0.z << std::endl;
-//    std::cout << "M1 * P: " << backpt1.x / backpt1.z << " , " << backpt1.y / backpt1.z << std::endl;
-
-    Matrix<double> point_3d_hom(4,1);
-    point_3d_hom.set_column({point_3d.x, point_3d.y, point_3d.z, 1.0}, 0);
-
-    std::cout << "point 0 current:\n" << point0 << std::endl;
-    std::cout << "point 1 current:\n" << point1 << std::endl;
-
-    auto backpt0 = to_Matrix(M0) * point_3d_hom;
-    auto backpt1 = to_Matrix(M1) * point_3d_hom;
-
-    std::cout << "tested pt0: " << backpt0 << std::endl;
-    std::cout << "tested pt1: " << backpt1 << std::endl;
-    std::cout << "M0 * P: " << backpt0(0,0) / backpt0(2,0) << " , "
-                            << backpt0(1,0) / backpt0(2,0) << std::endl;
-    std::cout << "M1 * P: " << backpt1(0,0) / backpt1(2,0) << " , "
-                            << backpt1(1,0) / backpt1(2,0) << std::endl;
-
-
 
     return point_3d;
 }
@@ -557,13 +418,6 @@ vec3 triangulate_linear_print(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
 std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3 K,
                                                std::vector<vec3> pts0,
                                                std::vector<vec3> pts1){
-//    std::cout << "R1:\n" << R01 << std::endl;
-//    std::cout << "R2:\n" << R02 << std::endl;
-//
-//    std::cout << "det R1:\n" << determinant(R01) << std::endl;
-//    std::cout << "det R2:\n" << determinant(R02) << std::endl;
-//
-//    std::cout << "u3: " << u3 << std::endl;
 
     // determinant of R has to be positive
     mat3 R1 = determinant(R01) * R01;
@@ -604,12 +458,11 @@ std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3
             // triangulate the point-pair
             vec3 pt_3d = triangulate_linear(pts0[i], pts1[i], K, R_curr, t_curr);
 
-//            std::cout << "resulting 3D point:\n" << pt_3d << std::endl;
-
             // find if the point is in front of both cameras
             // todo: camera center as simply t_curr.z was not correct
-            vec3 camera_center_1 = R_curr * t_curr;
-            if (pt_3d.z > 0 && pt_3d.z > camera_center_1.z){
+
+            vec3 pt_3d_1 = R_curr * pt_3d + t_curr;
+            if (pt_3d.z > 0 && pt_3d_1.z > 0){
                 cnt ++;
             }
         }
@@ -622,14 +475,7 @@ std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3
     }
     std::cout << "largest nr of valid points: " << cnt_max << std::endl;
 
-//    std::cout << "det R1 corrected:\n" << determinant(R1) << std::endl;
-//    std::cout << "det R2 corrected:\n" << determinant(R2) << std::endl;
-//    std::cout << "det R best:\n" << determinant(R_best) << std::endl;
-
-    std::cout << "t:\n" << t_best << std::endl;
-    std::cout << "R:\n" << R_best << std::endl;
-
-    return std::make_tuple(R_best, t_best);    // std::make_tuple(R2, t2);
+    return std::make_tuple(R_best, t_best); // std::make_tuple(R_best, t_best);
 };
 
 
@@ -651,18 +497,6 @@ std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> point
     // t = +- u3
     // R = U W V^T or U W^T V^T
 
-//    std::vector<vec3> points_0_canon;
-//    std::vector<vec3> points_1_canon;
-//
-//    for (vec3 point : points_0){
-//        points_0_canon.push_back(inverse(K) * point);
-//    }
-//
-//    for (vec3 point : points_1){
-//        points_1_canon.push_back(inverse(K) * point);
-//    }
-
-
     // SVD decomposition of E
     Matrix<double> U_mat(3, 3, 0.0);
     Matrix<double> S_mat(3, 3, 0.0);
@@ -671,32 +505,13 @@ std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> point
     Matrix<double> E_mat = to_Matrix(E);
     svd_decompose(E_mat, U_mat, S_mat, V_mat);
 
-//    std::cout << "U (E):\n" << U_mat << std::endl;
-//    std::cout << "S (E):\n" << S_mat << std::endl;
-//    std::cout << "V^T (E):\n" << V_mat << std::endl;
-
-//    std::cout << "E:\n" << E << std::endl;
-
-//    S_mat(0,0) = 1.0;
-//    S_mat(1,1) = 1.0;
-//
-//    std::cout << "S (E) ref:\n" << S_mat << std::endl;
-
-//    Matrix<double> E_assume = U_mat * S_mat * V_mat;
-//
-//    Matrix<double> U_ass(3, 3, 0.0);
-//    Matrix<double> S_ass(3, 3, 0.0);
-//    Matrix<double> V_ass(3, 3, 0.0);
-//
-//    svd_decompose(E_assume, U_ass, S_ass, V_ass);
-
     mat3 U = to_mat3(U_mat);
     mat3 S = to_mat3(S_mat);
     mat3 V = to_mat3(V_mat);
 
     // rotation R
-    mat3 R1 = U * W * V;
-    mat3 R2 = U * transpose(W) * V;
+    mat3 R1 = U * W * transpose(V);
+    mat3 R2 = U * transpose(W) * transpose(V);
 
     // translation t
     vec3 u3 = U.col(2);
@@ -737,15 +552,11 @@ bool Triangulation::triangulation(
 
     /// estimate the fundamental matrix F
     // normalize input points
-    std::tuple<std::vector<vec3>, mat3 > norm0 = normalize_input(points_0);
-    std::tuple<std::vector<vec3>, mat3 > norm1 = normalize_input(points_1);
-
-    // get normalized points
-    std::vector<vec3> pts0_norm = std::get<0>(norm0);
-    std::vector<vec3> pts1_norm = std::get<0>(norm1);
-    // get normalization transformation matrices
-    mat3 T_0 = std::get<1>(norm0);
-    mat3 T_1 = std::get<1>(norm1);
+    std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> norm = normalize_input_all(points_0, points_1);
+    std::vector<vec3> pts0_norm = std::get<0>(norm);
+    std::vector<vec3> pts1_norm = std::get<1>(norm);
+    mat3 T_0 = std::get<2>(norm);
+    mat3 T_1 = std::get<3>(norm);
 
     // construct F
     mat3 F_init = estimate_F(pts0_norm, pts1_norm);
@@ -753,31 +564,8 @@ bool Triangulation::triangulation(
     mat3 F_norm = transpose(T_1) * F_init * T_0;
     // rescale F
     mat3 F = F_norm / F_norm(2,2);
-//    mat3 F = F_norm;
-//    F(2,2) = 1.0;
-
-//    mat3 F_nonorm = estimate_F(points_0, points_1);
-//    F_nonorm = F_nonorm / F_nonorm(2,2);
-//
-//    F = F_nonorm;
-
 
     std::cout << "F:\n" << F << std::endl;
-
-    Matrix<double> F_test = to_Matrix(F);
-    Matrix<double> ptest0(1, 3, 0.0);
-    ptest0.set_row({points_0[0].x, points_0[0].y, points_0[0].z}, 0);
-    Matrix<double> ptest1(3, 1, 0.0);
-    ptest1.set_column({points_1[0].x, points_1[0].y, points_1[0].z}, 0);
-
-//    std::cout << "ptest0: " << ptest0 << std::endl;
-//    std::cout << "ptest1: " << ptest1 << std::endl;
-
-    Matrix<double> testF = ptest0 * F_test * ptest1 ;
-
-//    std::cout << "test F:" << testF << std::endl;
-//    std::cout << "test determinant F:" << determinant(F) << std::endl;
-
 
     /// compute the essential matrix E;
     // construct K from input intrinsic parameters
@@ -797,37 +585,21 @@ bool Triangulation::triangulation(
     // K' = K according to assignment
     mat3 E = transpose(K) * F * K;
 
-//    vec3 point0_c = inverse(K) * points_0[0];
-//    vec3 point1_c = inverse(K) * points_1[0];
-//
-//    Matrix<double> ptest0e(1, 3, 0.0);
-//    ptest0.set_row({point0_c.x, point0_c.y, point0_c.z}, 0);
-//    Matrix<double> ptest1e(3, 1, 0.0);
-//    ptest1.set_column({point1_c.x, point1_c.y, point1_c.z}, 0);
-//
-//    std::cout << "test E 2.0: " << ptest0e * E * ptest1e << std::endl;
-
     std::cout << "E:\n" << E << std::endl;
-
-    std::cout << "test E:" <<  ptest0 * to_Matrix(E) * ptest1 << std::endl;
-    std::cout << "test det E:" <<  determinant(E) << std::endl;
-    std::cout << "test F with E:" <<  transpose(inverse(K)) * E * inverse(K) << std::endl;
 
     /// recover rotation R and t.
     std::tuple<mat3, vec3> pos = relative_position(E, K, points_0, points_1);
     R = std::get<0>(pos);
     t = std::get<1>(pos);
 
-//    std::cout << "rr" << R * transpose(R) << std::endl;
+    std::cout << "R:\n" << R << std::endl;
+    std::cout << "t:\n" << t << std::endl;
 
 
     // TODO: Reconstruct 3D points. The main task is
     //      - triangulate a pair of image points (i.e., compute the 3D coordinates for each corresponding point pair)
     for (int i = 0; i < points_0.size(); ++i) {
         vec3 pt3d = triangulate_linear(points_0[i], points_1[i], K, R, t);
-
-//        std::cout << "resulting 3d point: " << pt3d << std::endl;
-
         points_3d.push_back(pt3d);
     }
 
