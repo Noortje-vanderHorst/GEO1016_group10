@@ -26,12 +26,13 @@
 #include "matrix_algo.h"
 #include <easy3d/optimizer/optimizer_lm.h>
 
-// todo: added this, don't know if it's allowed though
+// added tuple class to be able to return normalized points and their T matrices at the same time
 #include <tuple>
 
 
 using namespace easy3d;
 
+// given:
 
 /// convert a 3 by 3 matrix of type 'Matrix<double>' to mat3
 mat3 to_mat3(Matrix<double> &M) {
@@ -57,11 +58,14 @@ Matrix<double> to_Matrix(const mat &M) {
     return result;
 }
 
+// own functions:
+
 /// check input validity
 void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &points_2){
 
     std::vector<int> duplicateLocations;
 
+    // check if sizes match
     if (points_1.size() != points_2.size()){
         unsigned int mis = points_2.size() - points_1.size();
         std::cout << "point pairs do not match!" << std::endl;
@@ -82,6 +86,7 @@ void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &poin
             continue;
         }
 
+        // check if points are homogeneous with z = 1.0
         if (points_1[i].z != 1 || points_2[i].z != 1){
             std::cout << "Invalid constructed 2d point: ("
                       << points_1[i].x << " "
@@ -134,7 +139,6 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
     double x_coords1 = 0;    // total x coordinates
     double y_coords1 = 0;    // total y coordinates
     double z_coords1 = 0;    // total z coordinates
-    // not for z_coords, in this case the average should just be 1
 
     for (int i = 0; i < points0.size(); ++i) {
         // average x, y, (z) = centroid
@@ -155,7 +159,8 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
     double z_av0 = z_coords0 / (points0.size());     // centroid z
     double z_av1 = z_coords1 / (points0.size());     // centroid z
 
-    double dist0 = 0;        // total distance to origin (centroid), after translation
+    // total distance to origin (centroid), after translation, per image
+    double dist0 = 0;
     for (vec3 point : points0){
         double x_diff = point.x - x_av0;
         double y_diff = point.y - y_av0;
@@ -172,12 +177,13 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
         dist1 += sqrt(pow(x_diff, 2) + pow(y_diff, 2) + pow(z_diff, 2));
     }
 
+    // average distance to centroid, per image
     double dist0_av = dist0 / points0.size();
     double dist1_av = dist1 / points0.size();
 
     /// step 2: scaling and translating
     mat3 T0(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
-    mat3 T1(1.0f);           // translation transformation matrix, diagonal = 1 & rest = 0
+    mat3 T1(1.0f);
 
     mat3 T0_scale(1.0f);
     mat3 T1_scale(1.0f);
@@ -200,8 +206,8 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
 
     T1_scale(0,0) = scaling_factor1;  // x scaling
     T1_scale(1,1) = scaling_factor1;  // y scaling
+    // z scaling/translation should just remain 1: homogeneous coordinates
 
-    // z scaling/translation should just remain 1
     T0 = T0_scale * T0_trans;
     T1 = T1_scale * T1_trans;
 
@@ -222,14 +228,13 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
 
 /// Step 1: estimate fundamental matrix F
 mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
-
-    /// construct linear system W
     // row of W:
     // [ u u'       v u'        u'      u v'       v v'       v'      u       v       1   ]
     // [ x0 x1      y0 x1       x1      x0 y1      y0 y1      y1      x0      y0      1   ]
 
     //      0         1         2         3         4         5       6       7       8
 
+    /// construct linear system W
     // W size = n * 9
     Matrix<double> W(pts0_norm.size(), 9, 0.0);
 
@@ -261,14 +266,14 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     int n = 9;
 
     Matrix<double> U_W(m, m, 0.0);   // initialized with 0s
-    Matrix<double> S_W(m, n, 0.0);   // initialized with 0s
-    Matrix<double> V_W(n, n, 0.0);   // initialized with 0s
+    Matrix<double> S_W(m, n, 0.0);
+    Matrix<double> V_W(n, n, 0.0);
 
     // SVD decomposition of W
     svd_decompose(W, U_W, S_W, V_W);
 
     // F' from f (f = last column of V)
-    Matrix<double> F_e(3, 3, 0.0);    // initialized with 0s
+    Matrix<double> F_e(3, 3, 0.0);
 
     Matrix<double> V_W_T = transpose(V_W);
     // populate F'
@@ -284,7 +289,7 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     // S' --> S:
     // S =  | s1   0    0  |
     //      | 0    s2   0  |
-    //      | 0    0   [0] | <-- s3 = 0
+    //      | 0    0   [0] | <-- s3 = 0 (no scaling!)
     // F = U S V^T
 
     // decompose F' (3 x 3)
@@ -298,6 +303,7 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     // enforce rank 2
     S_F(2, 2) = 0.0;
 
+    /// construct final F
     Matrix<double> svd_res = U_F * S_F * transpose(V_F);
     mat3 F = to_mat3(svd_res);  // to fixed size for efficiency
 
@@ -305,14 +311,12 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
 }
 
 
-/// Step 2: Recover relative pose (R & t)
+/// Step 3: Determine the 3D coordinates
 vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
+    // p = M P               p' = M' P
 
-    // P --> MP = | u |      P --> M'P = | u' |
-    //            | v |                  | v' |
-    //            | 1 |                  | 1  |
-
-    // projection matrices of the two cameras (M & M' or M0 & M1 here)
+    /// projection matrices of the two cameras
+    // M & M', named M0 & M1 here
 
     // M = K[I 0]
     mat34 M0(1.0f);
@@ -328,13 +332,15 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
     M1.set_col(3, t);
     M1 = K * M1;
 
-    // fill A
+    /// construct matrix A
+    // AP = 0
     Matrix<double> A(4, 4, 0.0);
     vec4 elem00 = point0.x * M0.row(2) - M0.row(0);
     vec4 elem10 = point0.y * M0.row(2) - M0.row(1);
     vec4 elem20 = point1.x * M1.row(2) - M1.row(0);
     vec4 elem30 = point1.y * M1.row(2) - M1.row(1);
 
+    // fill A
     for (int i = 0; i < 4; ++i) {
         A(0,i) = elem00[i];
         A(1,i) = elem10[i];
@@ -342,6 +348,7 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
         A(3,i) = elem30[i];
     }
 
+    // SVD of A
     int h = A.rows();
     int w = A.cols();
 
@@ -351,20 +358,23 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
 
     svd_decompose(A, U, S, V);
 
-    Matrix<double> V_T = transpose(V);
-
+    /// construct point P
     Matrix<double> P(4, 1, 0.0);
     for (int i = 0; i < 4; ++i) {
         P(i,0) = V(i, w-1);
     }
 
+    // normalize P (homogeneous coordinates, w = 1.0)
     Matrix<double> res = (P / P(3,0));
+
+    // 4D (hom) to 3D (cartesian)
     vec3 point_3d = {float(res(0,0)), float(res(1,0)), float(res(2,0))};
 
     return point_3d;
 }
 
 
+/// Step 2: Recover relative pose (R & t)
 std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3 K,
                                                std::vector<vec3> pts0,
                                                std::vector<vec3> pts1){
@@ -409,28 +419,24 @@ std::tuple<mat3, vec3> correct_direction_poses(mat3 R01, mat3 R02, vec3 u3, mat3
             vec3 pt_3d = triangulate_linear(pts0[i], pts1[i], K, R_curr, t_curr);
 
             // find if the point is in front of both cameras
-            // todo: camera center as simply t_curr.z was not correct
-
-            vec3 pt_3d_1 = R_curr * pt_3d + t_curr;
+            vec3 pt_3d_1 = R_curr * pt_3d + t_curr;     // camera center of 2nd camera
             if (pt_3d.z > 0 && pt_3d_1.z > 0){
                 cnt ++;
             }
         }
-        // if more points are in front of both cameras in this situation
+        // check if more points are in front of both cameras here
         if (cnt > cnt_max){
             cnt_max = cnt;
             R_best = R_curr;
             t_best = t_curr;
         }
     }
-    std::cout << "largest nr of valid points: " << cnt_max << std::endl;
-
-    return std::make_tuple(R_best, t_best); // std::make_tuple(R_best, t_best);
+    return std::make_tuple(R_best, t_best);
 };
 
 
 std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> points_0, std::vector<vec3> points_1){
-    // determine relative position image 1 to image 0
+    /// determine relative position image 1 to image 0
     // as translation t and rotation R
 
     // W =  |   0  -1   0   |      Z =  |   0   1   0   |
@@ -438,16 +444,13 @@ std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> point
     //      |   0   0   1   |           |   0   0   0   |
 
     mat3 W = {0, -1, 0, 1, 0, 0, 0, 0, 1};
-    mat3 Z = {0, 1, 0, -1, 0, 0, 0, 0, 0};
 
-    // E = U S V^T
-    // E = [t]x R
+    // E = U S V^T          [t]x = U Z U^T
+    // E = [t]x R           t = +- u3
 
-    // [t]x = U Z U^T
-    // t = +- u3
     // R = U W V^T or U W^T V^T
 
-    // SVD decomposition of E
+    /// SVD decomposition of E
     Matrix<double> U_mat(3, 3, 0.0);
     Matrix<double> S_mat(3, 3, 0.0);
     Matrix<double> V_mat(3, 3, 0.0);
@@ -456,32 +459,24 @@ std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> point
     svd_decompose(E_mat, U_mat, S_mat, V_mat);
 
     mat3 U = to_mat3(U_mat);
-    mat3 S = to_mat3(S_mat);
     mat3 V = to_mat3(V_mat);
 
-    // rotation R
+    /// rotation R
     mat3 R1 = U * W * transpose(V);
     mat3 R2 = U * transpose(W) * transpose(V);
 
-    // translation t
+    /// translation t
     vec3 u3 = U.col(2);
 
-    // R and t, both in the correct direction
+    /// correct direction
+    // of both R and t
     std::tuple<mat3, vec3> rel_pos_corr = correct_direction_poses(R1, R2, u3, K, points_0, points_1);
 
     return rel_pos_corr;
 };
 
 
-/// Step 3: Determine the 3D coordinates
-void coords_3d(){};
 
-
-
-/**
- * TODO: Finish this function for reconstructing 3D geometry from corresponding image points.
- * @return True on success, otherwise false. On success, the reconstructed 3D points must be written to 'points_3d'.
- */
 bool Triangulation::triangulation(
         float fx, float fy,     /// input: the focal lengths (same for both cameras)
         float cx, float cy,     /// input: the principal point (same for both cameras)
@@ -495,10 +490,8 @@ bool Triangulation::triangulation(
     //--------------------------------------------------------------------------------------------------------------
     // implementation starts ...
 
-    // TODO: check if the input is valid (always good because you never known how others will call your function).
+    /// check if the input is valid (always good because you never known how others will call your function).
     test_input(points_0, points_1);
-
-    // TODO: Estimate relative pose of two views. This can be subdivided into:
 
     /// estimate the fundamental matrix F
     // normalize input points
@@ -515,10 +508,7 @@ bool Triangulation::triangulation(
     // rescale F
     mat3 F = F_norm / F_norm(2,2);
 
-    std::cout << "F:\n" << F << std::endl;
-
-    /// compute the essential matrix E;
-    // construct K from input intrinsic parameters
+    /// construct intrinsic matrix K from given input parameters
     // K =  |   fx    skew    cx   |
     //      |   0      fy     cy   |
     //      |   0      0       1   |
@@ -528,44 +518,25 @@ bool Triangulation::triangulation(
     K(0,2) = cx;
     K(1,2) = cy;
 
-    std::cout << "K:\n" << K << std::endl;
-
+    /// compute the essential matrix E;
     // E = K^T F K  --> intrinsics are known
-    // difference E and F: F is image coordinates, E = camera coordinates
     // K' = K according to assignment
     mat3 E = transpose(K) * F * K;
 
-    std::cout << "E:\n" << E << std::endl;
-
     /// recover rotation R and t.
+    // relative position between the two cameras
     std::tuple<mat3, vec3> pos = relative_position(E, K, points_0, points_1);
     R = std::get<0>(pos);
     t = std::get<1>(pos);
 
-    std::cout << "R:\n" << R << std::endl;
-    std::cout << "t:\n" << t << std::endl;
-
-
-    // TODO: Reconstruct 3D points. The main task is
-    //      - triangulate a pair of image points (i.e., compute the 3D coordinates for each corresponding point pair)
+    /// Reconstruct 3D points. The main task is triangulation
+    // triangulate a pair of image points
+    // (i.e., compute the 3D coordinates for each corresponding point pair)
     for (int i = 0; i < points_0.size(); ++i) {
         vec3 pt3d = triangulate_linear(points_0[i], points_1[i], K, R, t);
         points_3d.push_back(pt3d);
     }
 
-
-    // TODO: Don't forget to
-    //          - write your recovered 3D points into 'points_3d' (the viewer can visualize the 3D points for you);
-    //          - write the recovered relative pose into R and t (the view will be updated as seen from the 2nd camera,
-    //            which can help you to check if R and t are correct).
-    //       You must return either 'true' or 'false' to indicate whether the triangulation was successful (so the
-    //       viewer will be notified to visualize the 3D points and update the view).
-    //       However, there are a few cases you should return 'false' instead, for example:
-    //          - function not implemented yet;
-    //          - input not valid (e.g., not enough points, point numbers don't match);
-    //          - encountered failure in any step.
-
-
-
+    // return true or false on success or failure
     return points_3d.size() > 0;
 }
