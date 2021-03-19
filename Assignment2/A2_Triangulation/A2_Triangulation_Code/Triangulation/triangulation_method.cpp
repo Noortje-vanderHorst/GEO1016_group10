@@ -312,6 +312,7 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
 
 
 /// Step 3: Determine the 3D coordinates
+// linear triangulation method
 vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
     // p = M P               p' = M' P
 
@@ -371,6 +372,164 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
     vec3 point_3d = {float(res(0,0)), float(res(1,0)), float(res(2,0))};
 
     return point_3d;
+}
+
+/// non-linear triangulation with Gauss-Newton method
+// residual error calculation
+vec3 residual(vec3 point, mat34 M, vec4 point_3d){
+    //reprojected point
+    vec3 p0_rep_hom = M * point_3d;
+    // homogenous with z=1.0
+    vec3 prep = p0_rep_hom / p0_rep_hom.z;
+
+    vec3 error = prep - point;
+
+    return error;
+};
+
+// sum of squared errors (min (|| r(x) ||^2))
+double sum_square_error(vec3 point0, vec3 point1, mat34 M0, mat34 M1, vec4 P_est_curr){
+    vec3 error0 = residual(point0, M0, P_est_curr);
+    vec3 error1 = residual(point1, M1, P_est_curr);
+
+    double total_error0 = norm(error0);
+    double total_error1 = norm(error1);
+
+    double total_error = pow((total_error0 + total_error1), 2);
+
+    return total_error;
+};
+
+
+// non-linear triangulation method
+vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3 R, vec3 t){
+    // p = M P               p' = M' P
+
+    // minimize P_est : dist(M P_est - p)^2 + dist(M' P_est - p')^2
+
+    std::cout << "P from linear:\n" << point_3d << std::endl;
+
+    /// projection matrices of the two cameras
+    // M & M', named M0 & M1 here
+
+    // M = K[I 0]
+    mat34 M0(1.0f);
+    M0(2,3) = 0.0;
+    M0 = K * M0;
+
+    // M' = K'[R t]
+    mat34 M1(1.0f);
+    for (int i = 0; i < R.num_rows(); ++i) {
+        vec3 row = R.row(i);
+        M1.set_row(i, vec4(row[0], row[1], row[2], 0.0));
+    }
+    M1.set_col(3, t);
+    M1 = K * M1;
+
+    // 3d point in homogeneous coordinates
+    vec4 P_est = {point_3d.x, point_3d.y, point_3d.z, 1.0};
+
+    /// construct residuals e
+    // residuals per point
+    vec3 e0 = residual(point0, M0, P_est);
+    vec3 e1 = residual(point1, M1, P_est);
+
+    // residual matrix e (4x1)
+    Matrix<double> e(4,1);
+    e.set_column({e0.x, e0.y, e1.x, e1.y}, 0);
+
+    /// construct Jacobian J (4x3)
+    Matrix<double> J(4,3);
+
+    // delta P coor is always 1.0
+    vec4 Px_delta = {P_est.x+1, P_est.y, P_est.z, P_est.w};
+    vec4 Py_delta = {P_est.x, P_est.y+1, P_est.z, P_est.w};
+    vec4 Pz_delta = {P_est.x, P_est.y, P_est.z+1, P_est.w};
+
+    vec3 e0_delta_px = residual(point0, M0, Px_delta);
+    vec3 e0_delta_py = residual(point0, M0, Py_delta);
+    vec3 e0_delta_pz = residual(point0, M0, Pz_delta);
+
+    vec3 e1_delta_px = residual(point1, M1, Px_delta);
+    vec3 e1_delta_py = residual(point1, M1, Py_delta);
+    vec3 e1_delta_pz = residual(point1, M1, Pz_delta);
+
+    // point 0
+
+    // ex, 3d point x
+    J(0,0) = e0_delta_px.x;
+    // ex, 3d point y
+    J(0,1) = e0_delta_py.x;
+    // ex, 3d point z
+    J(0,2) = e0_delta_pz.x;     // error for z is always 0
+
+    // ey, 3d point x
+    J(1,0) = e0_delta_px.y;
+    // ey, 3d point y
+    J(1,1) = e0_delta_py.y;
+    // ey, 3d point z
+    J(1,2) = e0_delta_pz.y;     // error for z is always 0
+
+    // point 1
+
+    // ex, 3d point x
+    J(2,0) = e1_delta_px.x;
+    // ex, 3d point y
+    J(2,1) = e1_delta_py.x;
+    // ex, 3d point z
+    J(2,2) = e1_delta_pz.x;     // error for z is always 0
+
+    // ey, 3d point x
+    J(3,0) = e1_delta_px.y;
+    // ey, 3d point y
+    J(3,1) = e1_delta_py.y;
+    // ey, 3d point z
+    J(3,2) = e1_delta_pz.y;     // error for z is always 0
+
+
+    /// determine delta(P)
+    Matrix<double> JTJ = transpose(J) * J;
+    Matrix<double> JTJ_inv;
+    inverse(JTJ, JTJ_inv);
+    Matrix<double> delta_P = - JTJ_inv * transpose(J) * e;
+    vec4 delta_P_vec = {float(delta_P(0,0)), float(delta_P(1,0)), float(delta_P(2,0)), 0};
+
+    /// iterate until error is acceptable, or iteration was done x times
+    int steps = 50;             // total number of iterations
+    double epsilon = 0.00001;   // maximal acceptable error
+
+    int step_curr = 0;
+
+    double error_curr = sum_square_error(point0, point1, M0, M1, P_est);
+    double error_min = error_curr;
+
+    bool cont = true;
+
+    while(cont){
+        step_curr ++;
+        // take a step with delta p
+        vec4 P_est_curr = P_est + delta_P_vec;
+        error_curr = sum_square_error(point0, point1, M0, M1, P_est_curr);
+
+        if (error_curr < error_min){
+            P_est = P_est_curr;
+            error_min = error_curr;
+        }
+        if (step_curr >= steps){
+            cont = false;
+        }
+        if (error_min <= epsilon){
+            cont = false;
+        }
+    }
+
+    /// homogeneous to cartesian coordinates
+    vec4 res = P_est / P_est.w;
+    vec3 point_3d_est = {res.x, res.y, res.z};
+
+    std::cout << "P from non-linear:\n" << point_3d_est << std::endl;
+
+    return point_3d_est;
 }
 
 
@@ -534,7 +693,11 @@ bool Triangulation::triangulation(
     // (i.e., compute the 3D coordinates for each corresponding point pair)
     for (int i = 0; i < points_0.size(); ++i) {
         vec3 pt3d = triangulate_linear(points_0[i], points_1[i], K, R, t);
-        points_3d.push_back(pt3d);
+
+        // non-linear improvement on the linear triangulation
+        vec3 pt3d_imp = triangulate_nonlinear(points_0[i], points_1[i], pt3d, K, R, t);
+
+        points_3d.push_back(pt3d_imp);
     }
 
     // return true or false on success or failure
