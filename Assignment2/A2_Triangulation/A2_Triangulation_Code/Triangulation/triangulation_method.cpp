@@ -65,21 +65,13 @@ void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &poin
 
     std::vector<int> duplicateLocations;
 
-    // check if sizes match
-    if (points_1.size() != points_2.size()){
-        unsigned int mis = points_2.size() - points_1.size();
-        std::cout << "point pairs do not match!" << std::endl;
-        std::cout << "mismatch of:" << mis << " points!" << std::endl;
-        return;
-    }
-
     for (unsigned int i = 0; i < points_1.size(); i ++ ) {
         // check for negative 3D points
         if (points_1[i].x < 0 || points_1[i].y < 0  ||
             points_2[i].x < 0 || points_2[i].y < 0 ) {
             std::cout << "Invalid 2d point with negative coordinates: ("
                       << points_1[i].x << " "
-                      << points_1[i].z << ") at location: "
+                      << points_1[i].y << ") at location: "
                       << i << std::endl;
 
             duplicateLocations.emplace_back(i);
@@ -105,9 +97,11 @@ void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &poin
             if (points_1[i].x == points_1[j].x
                 && points_1[i].y == points_1[j].y) {
 
-                std::cout << "Duplicate 2d point with coordinates: ("
+                std::cout << "Duplicate 2d point point with coordinates: ("
                           << points_1[i][0] << " "
-                          << points_1[i][1] << ") at location: "
+                          << points_1[i][1] << ") - ("
+                          << points_2[i][0] << " "
+                          << points_2[i][1] << ") at location: "
                           << i << std::endl;
 
                 duplicateLocations.emplace_back(i);
@@ -116,9 +110,12 @@ void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &poin
         }
     }
 
+
     // check if the size after removal is big enough
     if (points_1.size() - duplicateLocations.size() < 8){
-        std::cerr << "expecting at least 8 unique pairs of corresponding points" << std::endl;
+        std::cout << "=========================================================" << std::endl;
+        std::cout << "expecting at least 8 unique pairs of corresponding points" << std::endl;
+        std::cout << "=========================================================" << std::endl;
     }
 }
 
