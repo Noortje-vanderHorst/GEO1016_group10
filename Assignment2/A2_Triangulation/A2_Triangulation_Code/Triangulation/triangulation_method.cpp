@@ -25,7 +25,7 @@
 #include "triangulation.h"
 #include "matrix_algo.h"
 #include <easy3d/optimizer/optimizer_lm.h>
-
+#include <chrono>
 // added tuple class to be able to return normalized points and their T matrices at the same time
 #include <tuple>
 
@@ -62,6 +62,8 @@ Matrix<double> to_Matrix(const mat &M) {
 
 /// check input validity
 void test_input(const std::vector<vec3> &points_1, const std::vector<vec3> &points_2){
+
+
 
     std::vector<int> duplicateLocations;
 
@@ -403,9 +405,6 @@ vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3
     // p = M P               p' = M' P
 
     // minimize P_est : dist(M P_est - p)^2 + dist(M' P_est - p')^2
-
-    std::cout << "P from linear:\n" << point_3d << std::endl;
-
     /// projection matrices of the two cameras
     // M & M', named M0 & M1 here
 
@@ -523,9 +522,6 @@ vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3
     /// homogeneous to cartesian coordinates
     vec4 res = P_est / P_est.w;
     vec3 point_3d_est = {res.x, res.y, res.z};
-
-    std::cout << "P from non-linear:\n" << point_3d_est << std::endl;
-
     return point_3d_est;
 }
 
@@ -646,6 +642,8 @@ bool Triangulation::triangulation(
     //--------------------------------------------------------------------------------------------------------------
     // implementation starts ...
 
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     /// check if the input is valid (always good because you never known how others will call your function).
     test_input(points_0, points_1);
 
@@ -696,6 +694,10 @@ bool Triangulation::triangulation(
 
         points_3d.push_back(pt3d_imp);
     }
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "triagulation duration: " << elapsedTime.count() << " s" << std::endl;
 
     // return true or false on success or failure
     return points_3d.size() > 0;
