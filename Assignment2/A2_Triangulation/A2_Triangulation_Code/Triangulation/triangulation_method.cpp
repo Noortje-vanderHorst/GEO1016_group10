@@ -159,6 +159,7 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
     double z_av1 = z_coords1 / (points0.size());     // centroid z
 
     // total distance to origin (centroid), after translation, per image
+    // image 0
     double dist0 = 0;
     for (vec3 point : points0){
         double x_diff = point.x - x_av0;
@@ -167,6 +168,7 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
 
         dist0 += sqrt(pow(x_diff, 2) + pow(y_diff, 2) + pow(z_diff, 2));
     }
+    // image 1
     double dist1 = 0;
     for (vec3 point : points1){
         double x_diff = point.x - x_av1;
@@ -227,12 +229,6 @@ std::tuple<std::vector<vec3>, std::vector<vec3>, mat3, mat3> normalize_input_all
 
 /// Step 1: estimate fundamental matrix F
 mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
-    // row of W:
-    // [ u u'       v u'        u'      u v'       v v'       v'      u       v       1   ]
-    // [ x0 x1      y0 x1       x1      x0 y1      y0 y1      y1      x0      y0      1   ]
-
-    //      0         1         2         3         4         5       6       7       8
-
     /// construct linear system W
     // W size = n * 9
     Matrix<double> W(pts0_norm.size(), 9, 0.0);
@@ -256,11 +252,6 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     }
 
     /// solve Wf = 0 --> F'
-    // decompose matrix of size (m x n):
-    // U = (m x m)
-    // S = (m x n)
-    // V = (n x n)
-
     int m = pts0_norm.size();
     int n = 9;
 
@@ -283,13 +274,6 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
     }
 
     /// minimization & rank 2 --> F
-    // F' = U S' V^T
-    // where F' is minimized to approach F, and S has rank 2:
-    // S' --> S:
-    // S =  | s1   0    0  |
-    //      | 0    s2   0  |
-    //      | 0    0   [0] | <-- s3 = 0 (no scaling!)
-    // F = U S V^T
 
     // decompose F' (3 x 3)
     Matrix<double> U_F(3, 3, 0.0);   // initialized with 0s
@@ -313,7 +297,6 @@ mat3 estimate_F(std::vector<vec3> pts0_norm, std::vector<vec3> pts1_norm){
 /// Step 3: Determine the 3D coordinates
 // linear triangulation method
 vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
-    // p = M P               p' = M' P
 
     /// projection matrices of the two cameras
     // M & M', named M0 & M1 here
@@ -376,8 +359,10 @@ vec3 triangulate_linear(vec3 point0, vec3 point1, mat3 K, mat3 R, vec3 t){
 /// non-linear triangulation with Gauss-Newton method
 // residual error calculation
 vec3 residual(vec3 point, mat34 M, vec4 point_3d){
+
     //reprojected point
     vec3 p0_rep_hom = M * point_3d;
+
     // homogenous with z=1.0
     vec3 prep = p0_rep_hom / p0_rep_hom.z;
 
@@ -391,10 +376,7 @@ double sum_square_error(vec3 point0, vec3 point1, mat34 M0, mat34 M1, vec4 P_est
     vec3 error0 = residual(point0, M0, P_est_curr);
     vec3 error1 = residual(point1, M1, P_est_curr);
 
-    double total_error0 = norm(error0);
-    double total_error1 = norm(error1);
-
-    double total_error = pow((total_error0 + total_error1), 2);
+    double total_error = pow((norm(error0) + norm(error1)), 2);
 
     return total_error;
 };
@@ -452,36 +434,17 @@ vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3
 
     // point 0
 
-    // ex, 3d point x
-    J(0,0) = e0_delta_px.x;
-    // ex, 3d point y
-    J(0,1) = e0_delta_py.x;
-    // ex, 3d point z
-    J(0,2) = e0_delta_pz.x;     // error for z is always 0
+    for (int i = 0; i < 2; ++i) {
+        J (i, 0) = e0_delta_px[i];
+        J (i, 1) = e0_delta_py[i];
+        J (i, 2) = e0_delta_pz[i];
+    }
 
-    // ey, 3d point x
-    J(1,0) = e0_delta_px.y;
-    // ey, 3d point y
-    J(1,1) = e0_delta_py.y;
-    // ey, 3d point z
-    J(1,2) = e0_delta_pz.y;     // error for z is always 0
-
-    // point 1
-
-    // ex, 3d point x
-    J(2,0) = e1_delta_px.x;
-    // ex, 3d point y
-    J(2,1) = e1_delta_py.x;
-    // ex, 3d point z
-    J(2,2) = e1_delta_pz.x;     // error for z is always 0
-
-    // ey, 3d point x
-    J(3,0) = e1_delta_px.y;
-    // ey, 3d point y
-    J(3,1) = e1_delta_py.y;
-    // ey, 3d point z
-    J(3,2) = e1_delta_pz.y;     // error for z is always 0
-
+    for (int i = 0; i < 2; ++i) {
+        J (i + 2, 0) = e1_delta_px[i];
+        J (i + 2, 1) = e1_delta_py[i];
+        J (i + 2, 2) = e1_delta_pz[i];
+    }
 
     /// determine delta(P)
     Matrix<double> JTJ = transpose(J) * J;
