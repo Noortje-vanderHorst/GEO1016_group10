@@ -28,6 +28,10 @@
 #include <chrono>
 // added tuple class to be able to return normalized points and their T matrices at the same time
 #include <tuple>
+#include <iostream>
+#include <fstream>
+
+#include <easy3d/fileio/resources.h>
 
 
 using namespace easy3d;
@@ -591,6 +595,47 @@ std::tuple<mat3, vec3> relative_position(mat3 E, mat3 K, std::vector<vec3> point
 };
 
 
+void triangulation_to_file(std::vector<vec3> points, std::string filepath0, std::string filepath1,  mat3 K, mat3 R, vec3 t){
+    // M = K[I 0]
+    mat34 M0(1.0f);
+    M0(2,3) = 0.0;
+    M0 = K * M0;
+
+    // M' = K'[R t]
+    mat34 M1(1.0f);
+    for (int i = 0; i < R.num_rows(); ++i) {
+        vec3 row = R.row(i);
+        M1.set_row(i, vec4(row[0], row[1], row[2], 0.0));
+    }
+    M1.set_col(3, t);
+    M1 = K * M1;
+
+    std::ofstream out_file0;
+    out_file0.open(filepath0, std::ios::out);
+
+    std::ofstream out_file1;
+    out_file1.open(filepath1, std::ios::out);
+
+    for (auto point: points){
+        // 3d point in homogeneous coordinates
+        vec4 P_hom = {point.x, point.y, point.z, 1.0};
+
+        //reprojected point
+        vec3 p0_hom = M0 * P_hom;
+        vec3 p1_hom = M1 * P_hom;
+        // homogenous with z=1.0
+        vec3 p0 = p0_hom / p0_hom.z;
+        vec3 p1 = p1_hom / p1_hom.z;
+
+        out_file0 << p0.x << " " << p0.y << std::endl;
+        out_file1 << p1.x << " " << p1.y << std::endl;
+    }
+
+    out_file0.close();
+    out_file1.close();
+}
+
+
 
 bool Triangulation::triangulation(
         float fx, float fy,     /// input: the focal lengths (same for both cameras)
@@ -649,6 +694,10 @@ bool Triangulation::triangulation(
     /// Reconstruct 3D points. The main task is triangulation
     // triangulate a pair of image points
     // (i.e., compute the 3D coordinates for each corresponding point pair)
+
+    // list for linear result, so they can be outputted to file for testng
+    std::vector<vec3> points_3d_linear;
+
     for (int i = 0; i < points_0.size(); ++i) {
         vec3 pt3d = triangulate_linear(points_0[i], points_1[i], K, R, t);
 
@@ -656,7 +705,20 @@ bool Triangulation::triangulation(
         vec3 pt3d_imp = triangulate_nonlinear(points_0[i], points_1[i], pt3d, K, R, t);
 
         points_3d.push_back(pt3d_imp);
+
+        // for testing
+        points_3d_linear.push_back(pt3d);
     }
+
+    // for testing/comparison, can output both triangulation results to file
+    const std::string output_linear0 = resource::directory() + "/data/linear_reproj0.txt";
+    const std::string output_linear1 = resource::directory() + "/data/linear_reproj1.txt";
+
+    const std::string output_nonlinear0 = resource::directory() +"/data/nonlinear_reproj0.txt";
+    const std::string output_nonlinear1 = resource::directory() +"/data/nonlinear_reproj1.txt";
+
+    triangulation_to_file(points_3d_linear, output_linear0, output_linear1, K, R, t);
+    triangulation_to_file(points_3d, output_nonlinear0, output_nonlinear1, K, R, t);
 
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedTime = endTime - startTime;
