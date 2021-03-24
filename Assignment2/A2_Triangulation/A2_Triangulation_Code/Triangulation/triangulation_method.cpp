@@ -29,7 +29,6 @@
 // added tuple class to be able to return normalized points and their T matrices at the same time
 #include <tuple>
 #include <iostream>
-#include <fstream>
 
 #include <easy3d/fileio/resources.h>
 
@@ -704,15 +703,15 @@ bool Triangulation::triangulation(
         points_3d_linear.push_back(pt3d);
     }
 
-    // for testing/comparison, can output both triangulation results to file
-    const std::string output_linear0 = resource::directory() + "/data/linear_reproj0.txt";
+    /// for testing/comparison, can output both triangulation results to file
+    /*const std::string output_linear0 = resource::directory() + "/data/linear_reproj0.txt";
     const std::string output_linear1 = resource::directory() + "/data/linear_reproj1.txt";
 
     const std::string output_nonlinear0 = resource::directory() +"/data/nonlinear_reproj0.txt";
     const std::string output_nonlinear1 = resource::directory() +"/data/nonlinear_reproj1.txt";
 
     triangulation_to_file(points_3d_linear, output_linear0, output_linear1, K, R, t);
-    triangulation_to_file(points_3d, output_nonlinear0, output_nonlinear1, K, R, t);
+    triangulation_to_file(points_3d, output_nonlinear0, output_nonlinear1, K, R, t);*/
 
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedTime = endTime - startTime;
