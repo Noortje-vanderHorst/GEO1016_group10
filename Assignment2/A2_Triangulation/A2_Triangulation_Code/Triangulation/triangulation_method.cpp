@@ -459,38 +459,30 @@ vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3
 
     /// iterate until error is acceptable, or iteration was done x times
     int steps = 50;             // total number of iterations
-    double epsilon = 0.00001;   // maximal acceptable error
-
-    int step_curr = 0;
+    double epsilon = 0.0000000001;   // maximal acceptable error
 
     double error_curr = sum_square_error(point0, point1, M0, M1, P_est);
     double error_min = error_curr;
 
-    bool cont = true;
-
-    while(cont){
-        step_curr ++;
+    for (int i = 0; i < steps; ++i) {
         // take a step with delta p
         vec4 P_est_curr = P_est + delta_P_vec;
         error_curr = sum_square_error(point0, point1, M0, M1, P_est_curr);
 
-        if (error_curr < error_min){
+        if (error_curr < error_min) {
             P_est = P_est_curr;
             error_min = error_curr;
         }
-        if (step_curr >= steps){
-            cont = false;
-        }
-        if (error_min <= epsilon){
-            cont = false;
+        if (error_min <= epsilon) {
+            break;
         }
     }
-
     /// homogeneous to cartesian coordinates
     vec4 res = P_est / P_est.w;
     vec3 point_3d_est = {res.x, res.y, res.z};
     return point_3d_est;
 }
+
 
 
 /// Step 2: Recover relative pose (R & t)
