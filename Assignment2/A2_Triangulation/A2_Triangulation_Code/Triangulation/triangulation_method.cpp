@@ -474,6 +474,8 @@ vec3 triangulate_nonlinear(vec3 point0, vec3 point1, vec3 point_3d, mat3 K, mat3
             error_min = error_curr;
         }
         if (error_min <= epsilon) {
+            P_est = P_est_curr;
+            error_min = error_curr;
             break;
         }
     }
